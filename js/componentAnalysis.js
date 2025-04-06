@@ -429,10 +429,11 @@ class ComponentAnalyzer {
             // Propellers are most efficient at mid throttle
             const throttleFactor = 1 - Math.pow((throttle - 50) / 50, 2);
             const efficiency = baseEfficiency * throttleFactor;
-            // Round to 1 decimal place
+            
+            // Ensure exactly 1 decimal place by using a more robust approach
             return {
                 throttle: throttle,
-                efficiency: parseFloat((Math.max(0.1, efficiency)).toFixed(1))
+                efficiency: Number((Math.floor(efficiency * 10) / 10).toFixed(1))
             };
         });
     }

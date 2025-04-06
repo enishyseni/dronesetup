@@ -324,12 +324,10 @@ class DroneCharts {
             this.charts.efficiencyChart.destroy();
         }
         
-        // Prepare data for the efficiency chart (weight to flight time ratio)
-        // Lower ratio means more efficient (lighter weight for longer flight times)
+        // Ensure exactly 1 decimal precision for all data points
         const efficiencyData = data.map(d => ({
             option: d.option,
-            // Current draw during hover/cruise
-            current: d.current
+            current: Number(Number(d.current).toFixed(1))
         }));
         
         this.charts.efficiencyChart = new Chart(ctx, {
@@ -359,6 +357,13 @@ class DroneCharts {
                     },
                     legend: {
                         display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (context) => {
+                                return `Current Draw: ${context.raw.toFixed(1)}A`;
+                            }
+                        }
                     }
                 },
                 scales: {
@@ -367,6 +372,9 @@ class DroneCharts {
                         title: {
                             display: true,
                             text: 'Current (A)'
+                        },
+                        ticks: {
+                            callback: (value) => value.toFixed(1) // Fix decimal precision
                         }
                     }
                 }
@@ -650,7 +658,7 @@ class DroneCharts {
                 labels: data.map(d => this.formatLabel(d.option)),
                 datasets: [{
                     label: 'Current Draw (A)',
-                    data: data.map(d => d.current),
+                    data: data.map(d => Number(Number(d.current).toFixed(1))), // Fix decimal precision
                     backgroundColor: this.colorPalette[3],
                     borderWidth: 1
                 }]
@@ -693,8 +701,8 @@ class DroneCharts {
                 { ...this.getCurrentConfig(), [Object.keys(data[0].option)[0]]: d.option },
                 d.weight
             );
-            // Make sure we only get the numeric part and parse it as a float
-            return parseFloat(pwrStr.split(':')[0]);
+            // Make sure we only get the numeric part and parse it as a float with 1 decimal precision
+            return parseFloat(parseFloat(pwrStr.split(':')[0]).toFixed(1));
         });
         
         this.charts.powerToWeightChart = new Chart(ctx, {
@@ -721,7 +729,7 @@ class DroneCharts {
                     tooltip: {
                         callbacks: {
                             label: (context) => {
-                                return `${context.raw}:1`;
+                                return `${context.raw.toFixed(1)}:1`;
                             }
                         }
                     }
@@ -974,7 +982,10 @@ class DroneCharts {
                             font: { size: 11 }
                         },
                         ticks: {
-                            callback: (value) => `${(value * 100).toFixed(1)}%` // Fixed to 1 decimal place
+                            callback: function(value) {
+                                // Ensure consistent decimal formatting in the efficiency map
+                                return Number(value * 100).toFixed(1) + '%';
+                            }
                         }
                     },
                     x: {
@@ -1055,13 +1066,19 @@ class DroneCharts {
         // Get propeller efficiency data from analyzer
         const propData = this.analyzer.getPropEfficiencyData(config);
         
+        // Apply more robust decimal formatting
+        const processedData = propData.map(d => ({
+            throttle: d.throttle,
+            efficiency: Number(Number(d.efficiency).toFixed(1))
+        }));
+        
         this.charts.propEfficiencyChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: propData.map(d => `${d.throttle}%`),
+                labels: processedData.map(d => `${d.throttle}%`),
                 datasets: [{
                     label: 'Propeller Efficiency',
-                    data: propData.map(d => d.efficiency),
+                    data: processedData.map(d => d.efficiency),
                     backgroundColor: 'rgba(75, 192, 192, 0.2)',
                     borderColor: 'rgba(75, 192, 192, 1)',
                     borderWidth: 2,
@@ -1090,7 +1107,10 @@ class DroneCharts {
                             font: { size: 11 }
                         },
                         ticks: {
-                            callback: (value) => `${Math.round(value * 100)}%`
+                            callback: function(value) {
+                                // Ensure consistent decimal formatting in axis labels
+                                return Number(value * 100).toFixed(1) + '%';
+                            }
                         }
                     },
                     x: {

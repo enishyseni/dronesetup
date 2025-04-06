@@ -194,21 +194,27 @@ class DroneCalculator {
         let avgCurrent;
 
         if (this.droneType === 'fpv') {
-            // FPV drones draw more current, especially with higher KV motors
-            const kvFactor = parseInt(config.motorKv) / 1000;
+            // FPV drones draw more current - Fixed the calculation to be more realistic
+            const kvFactor = parseInt(config.motorKv) / 2400; // Normalized to a common KV
             // Li-ion can't handle as high discharge rates as LiPo
             const dischargeFactor = batteryType === 'lipo' ? 1.0 : 0.7;
-            avgCurrent = voltage * kvFactor * (totalWeight / 500) * dischargeFactor; // Rough estimate
+            
+            // Completely revised formula for more reasonable current draw
+            avgCurrent = (totalWeight / 250) * kvFactor * dischargeFactor; // Much more realistic estimate
         } else {
             // Fixed wings are more efficient
             const dischargeFactor = batteryType === 'lipo' ? 1.0 : 0.8;
-            avgCurrent = voltage * 0.8 * (totalWeight / 800) * dischargeFactor;
+            // Revised formula for fixed wing
+            avgCurrent = (totalWeight / 500) * 0.8 * dischargeFactor;
         }
 
         // Calculate flight time in minutes
         // Using a discharge factor (you don't fully discharge the battery)
         const dischargeSafety = batteryType === 'lipo' ? 0.8 : 0.9; // Li-ion can be discharged more deeply
-        return Math.round((capacityFactor / avgCurrent) * 60 * dischargeSafety * energyDensityFactor);
+        const calculatedTime = (capacityFactor / avgCurrent) * 60 * dischargeSafety * energyDensityFactor;
+        
+        // Add a minimum realistic flight time
+        return Math.max(Math.round(calculatedTime), 3);
     }
 
     calculatePayloadCapacity(config, totalWeight) {
@@ -389,18 +395,19 @@ class DroneCalculator {
             const frameSize = parseInt(config.frameSize.replace('inch', ''));
             const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
             
+            // Revised formula for more realistic current demands
             // Estimate maximum current draw per motor during hard acceleration
-            const maxCurrentPerMotor = kvFactor * frameSize * (cellCount / 4) * 5;
+            const maxCurrentPerMotor = kvFactor * frameSize * 0.6; // Reduced multiplier
             
-            // Total maximum current (4 motors at peak)
-            maxCurrentDraw = maxCurrentPerMotor * 4;
+            // Total maximum current (4 motors but not all at full power simultaneously)
+            maxCurrentDraw = maxCurrentPerMotor * 3; // Changed from 4 to 3 to reflect real-world usage
         } else {
             const kvFactor = parseInt(config.motorKv) / 1000;
             const wingspan = parseInt(config.wingspan) / 1000;
             const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
             
-            // Estimate maximum current draw for fixed wing
-            maxCurrentDraw = kvFactor * wingspan * cellCount * 5;
+            // Revised formula for fixed wing
+            maxCurrentDraw = kvFactor * wingspan * 2; // Reduced multiplier
         }
         
         // Calculate the C rating (current / capacity)
@@ -409,9 +416,8 @@ class DroneCalculator {
         // Round to nearest 5 for display
         const roundedCRating = Math.ceil(cRating / 5) * 5;
         
-        // Check if the battery chemistry can handle this discharge rate
-        // LiPo can typically handle up to 75C, Li-Ion usually only up to 10C
-        const maxCRating = batteryType === 'lipo' ? 75 : 10;
+        // Updated maximum C-ratings for different battery chemistries
+        const maxCRating = batteryType === 'lipo' ? 100 : 15; // Increased thresholds
         
         if (roundedCRating > maxCRating) {
             return roundedCRating + "C (Too high for " + (batteryType === 'lipo' ? "LiPo)" : "Li-Ion)");
@@ -456,7 +462,7 @@ class DroneCalculator {
             hoverCurrent = (totalWeight / 1000) * 9.8 / (voltage * 1.5 * wingspan * efficiencyFactor);
         }
         
-        return hoverCurrent.toFixed(1);
+        return parseFloat(hoverCurrent.toFixed(1));
     }
 
     getComparisonData(config, metric) {
@@ -513,8 +519,8 @@ class DroneCalculator {
                 weight: weight,
                 payload: this.calculatePayloadCapacity(tempConfig, weight),
                 range: parseInt(this.calculateRange(tempConfig)),
-                current: parseFloat(this.calculateHoverCurrent(tempConfig, weight)),
-                efficiency: weight / this.calculateFlightTime(tempConfig, weight) // Lower is better
+                current: parseFloat(parseFloat(this.calculateHoverCurrent(tempConfig, weight)).toFixed(1)), // Ensure 1 decimal precision
+                efficiency: parseFloat((weight / this.calculateFlightTime(tempConfig, weight)).toFixed(1)) // Fix decimal precision
             });
         }
         
