@@ -2,8 +2,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize the calculator
     const calculator = new DroneCalculator();
     
-    // Initialize charts
-    const droneCharts = new DroneCharts(calculator);
+    // Initialize component analyzer
+    const componentAnalyzer = new ComponentAnalyzer(calculator);
+    
+    // Initialize charts with analyzer
+    const droneCharts = new DroneCharts(calculator, componentAnalyzer);
     droneCharts.initCharts();
     
     // Get all configuration inputs
@@ -37,6 +40,12 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('dischargeRate').textContent = results.dischargeRate;
         document.getElementById('hoverCurrent').textContent = results.hoverCurrent;
         
+        // Update component analysis section
+        const analysis = componentAnalyzer.analyzeConfiguration(config);
+        document.getElementById('heaviestComponent').textContent = analysis.heaviestComponent;
+        document.getElementById('limitingFactor').textContent = analysis.limitingFactor;
+        document.getElementById('suggestedImprovement').textContent = analysis.suggestedImprovement;
+        
         // Update charts - default to comparing battery types
         const chartMetric = calculator.droneType === 'fpv' ? 'batteryType' : 'batteryType';
         droneCharts.updateCharts(config, chartMetric);
@@ -53,6 +62,9 @@ document.addEventListener('DOMContentLoaded', function() {
             calculator.setDroneType('fixedWing');
             fixedWingOnlyElements.forEach(el => el.classList.remove('hidden'));
         }
+        
+        // Also update the analyzer's drone type if needed
+        componentAnalyzer.setDroneType && componentAnalyzer.setDroneType(calculator.droneType);
         
         updateResults();
     }

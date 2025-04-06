@@ -10,6 +10,7 @@
       rel="stylesheet"
     />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
   </head>
   <body>
     <div class="container">
@@ -119,22 +120,96 @@
               <option value="delta">Delta Wing</option>
             </select>
           </div>
+
+          <!-- Add component comparison selector -->
+          <div class="config-section">
+            <label for="compareBy">Analyze Impact By</label>
+            <select id="compareBy" class="glass-select">
+              <option value="batteryType">Battery Chemistry</option>
+              <option value="batteryCapacity">Battery Capacity</option>
+              <option value="motorKv">Motor KV</option>
+              <option value="frameSize">Frame Size</option>
+              <option value="vtxPower">VTX Power</option>
+              <option value="all">All Components</option>
+            </select>
+          </div>
         </div>
 
         <div class="visualization glass-panel">
-          <h2>Performance Graphs</h2>
-          <div class="chart-container">
-            <div class="chart-wrapper">
-              <canvas id="speedChart"></canvas>
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="performance">
+              Performance
+            </button>
+            <button class="tab-btn" data-tab="weight">Weight Analysis</button>
+            <button class="tab-btn" data-tab="power">Power Usage</button>
+            <button class="tab-btn" data-tab="advanced">Advanced</button>
+          </div>
+
+          <div class="tab-content active" id="performance-tab">
+            <div class="chart-container">
+              <div class="chart-wrapper">
+                <canvas id="speedChart"></canvas>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="flightTimeChart"></canvas>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="rangeChart"></canvas>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="efficiencyChart"></canvas>
+              </div>
             </div>
-            <div class="chart-wrapper">
-              <canvas id="flightTimeChart"></canvas>
+          </div>
+
+          <div class="tab-content" id="weight-tab">
+            <div class="chart-container">
+              <div class="chart-wrapper">
+                <canvas id="weightDistributionChart"></canvas>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="payloadCapacityChart"></canvas>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="weightComparisonChart"></canvas>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="componentWeightChart"></canvas>
+              </div>
             </div>
-            <div class="chart-wrapper">
-              <canvas id="rangeChart"></canvas>
+          </div>
+
+          <div class="tab-content" id="power-tab">
+            <div class="chart-container">
+              <div class="chart-wrapper">
+                <canvas id="currentDrawChart"></canvas>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="powerToWeightChart"></canvas>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="batteryDischargeChart"></canvas>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="thermalEfficiencyChart"></canvas>
+              </div>
             </div>
-            <div class="chart-wrapper">
-              <canvas id="efficiencyChart"></canvas>
+          </div>
+
+          <div class="tab-content" id="advanced-tab">
+            <div class="chart-container">
+              <div class="chart-wrapper">
+                <canvas id="thrustCurveChart"></canvas>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="efficiencyMapChart"></canvas>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="noiseChart"></canvas>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="propEfficiencyChart"></canvas>
+              </div>
             </div>
           </div>
         </div>
@@ -173,6 +248,23 @@
             <span>Current Draw (Hover):</span>
             <span id="hoverCurrent">0 A</span>
           </div>
+
+          <!-- Add Component Analysis Section -->
+          <h3 class="section-header">Component Impact Analysis</h3>
+          <div class="component-analysis">
+            <div class="impact-item">
+              <span>Heaviest Component:</span>
+              <span id="heaviestComponent">Battery (350g)</span>
+            </div>
+            <div class="impact-item">
+              <span>Limiting Factor:</span>
+              <span id="limitingFactor">Battery capacity</span>
+            </div>
+            <div class="impact-item">
+              <span>Suggested Improvement:</span>
+              <span id="suggestedImprovement">Increase battery capacity</span>
+            </div>
+          </div>
         </div>
       </main>
 
@@ -184,6 +276,7 @@
     </div>
 
     <script src="js/calculations.js"></script>
+    <script src="js/componentAnalysis.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/main.js"></script>
   </body>
