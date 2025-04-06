@@ -1137,9 +1137,9 @@ class DroneCharts {
         // Check if it's a number (capacity or wing span)
         if (!isNaN(parseInt(label))) {
             if (parseInt(label) > 500) {
-                return `${label}mm`;  // It's wingspan
+                return `${label} mm`;  // It's wingspan - add space
             } else {
-                return `${label}mAh`; // It's capacity
+                return `${label} mAh`; // It's capacity - add space
             }
         }
         return label;

@@ -359,10 +359,18 @@ footer {
   margin-top: 2px;
 }
 
+/* Add spacing and overflow handling for slider labels */
+.slider-labels span {
+  overflow: hidden;
+  text-align: center;
+  padding: 0 2px;
+}
+
 /* Media query adjustments for sliders */
 @media (max-width: 950px) {
   .slider-labels span {
     font-size: 0.65rem;
+    max-width: 50px;
   }
 }
 
