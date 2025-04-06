@@ -558,4 +558,125 @@ class DroneCalculator {
             hoverCurrent: hoverCurrent + ' A'
         };
     }
+
+    /**
+     * Calculate motor RPM based on KV rating and battery voltage
+     */
+    calculateMotorRPM(config) {
+        const kvRating = parseInt(config.motorKv);
+        const batteryType = config.batteryType;
+        const cellCount = parseInt(batteryType.split('-')[1].replace('s', ''));
+        const nominalVoltage = 3.7 * cellCount; // Nominal LiPo/Li-ion voltage
+        
+        return kvRating * nominalVoltage;
+    }
+    
+    /**
+     * Calculate thrust based on motor/prop combination
+     * T = Ct × ρ × n² × D⁴
+     */
+    calculateThrust(config) {
+        const rpm = this.calculateMotorRPM(config);
+        
+        // Constants and conversions
+        const airDensity = 1.225; // kg/m³ at sea level
+        const thrustCoefficient = 0.09; // Approximation - would be from prop data in reality
+        
+        // Map frame size to prop diameter in inches then convert to meters
+        const propDiameters = {
+            '3inch': 0.0762, // 3in to meters
+            '5inch': 0.127,  // 5in to meters
+            '7inch': 0.1778, // 7in to meters
+            '10inch': 0.254  // 10in to meters
+        };
+        
+        const propDiameter = propDiameters[config.frameSize];
+        const rps = rpm / 60; // Convert RPM to revolutions per second
+        
+        // Calculate thrust in newtons
+        const thrust = thrustCoefficient * airDensity * Math.pow(rps, 2) * Math.pow(propDiameter, 4);
+        
+        // Return thrust in grams (1N ≈ 102g)
+        return thrust * 102;
+    }
+    
+    /**
+     * Calculate motor efficiency
+     */
+    calculateMotorEfficiency(config) {
+        // This would require more data like current draw and power
+        // Using simplified model based on motor KV and prop matching
+        const kvRating = parseInt(config.motorKv);
+        const frameSize = config.frameSize;
+        
+        // Optimal KV ranges for different frame sizes
+        const optimalKvRanges = {
+            '3inch': [2500, 3000],
+            '5inch': [2000, 2600],
+            '7inch': [1600, 2200],
+            '10inch': [1000, 1700]
+        };
+        
+        const [minKv, maxKv] = optimalKvRanges[frameSize];
+        
+        // Calculate efficiency as percentage of optimal range
+        if (kvRating < minKv) {
+            return 70 + (kvRating - minKv + 500) / 500 * 15; // Underpowered
+        } else if (kvRating > maxKv) {
+            return 85 - (kvRating - maxKv) / 400 * 15; // Overpowered
+        } else {
+            // Within optimal range
+            const rangeWidth = maxKv - minKv;
+            const midpoint = minKv + rangeWidth / 2;
+            const distanceFromMid = Math.abs(kvRating - midpoint);
+            return 95 - (distanceFromMid / (rangeWidth / 2)) * 10;
+        }
+    }
+    
+    /**
+     * Calculate PID values based on frame size and motor KV
+     */
+    calculateRecommendedPIDValues(config) {
+        const frameSize = config.frameSize;
+        const motorKv = parseInt(config.motorKv);
+        
+        // Base PID values by frame size
+        const basePIDs = {
+            '3inch': { P: 40, I: 50, D: 25 },
+            '5inch': { P: 45, I: 45, D: 25 },
+            '7inch': { P: 38, I: 40, D: 22 },
+            '10inch': { P: 30, I: 35, D: 18 }
+        };
+        
+        const pid = {...basePIDs[frameSize]};
+        
+        // Adjust P based on motor KV (higher KV = more responsive = higher P)
+        if (motorKv > 2600) {
+            pid.P *= 1.15;
+        } else if (motorKv < 2000) {
+            pid.P *= 0.85;
+        }
+        
+        // Adjust D based on frame size and motor KV
+        if (frameSize === '5inch' && motorKv > 2400) {
+            pid.D *= 1.2; // More dampening for high KV 5" builds
+        }
+        
+        return pid;
+    }
+    
+    /**
+     * Calculate latency based on radio protocol
+     */
+    calculateControlLatency(protocol) {
+        const protocolLatencies = {
+            'crsf': 5,       // 4-6ms
+            'elrs': 3.5,     // 2-5ms
+            'frsky_d8': 20,  // 18-22ms
+            'frsky_d16': 13, // 12-15ms
+            'spektrum': 13   // 12-14ms
+        };
+        
+        return protocolLatencies[protocol] || 15; // Default if unknown
+    }
 }

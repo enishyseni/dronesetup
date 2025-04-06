@@ -492,4 +492,147 @@ class ComponentAnalyzer {
             thrustCurveData
         };
     }
+
+    /**
+     * Calculate power system optimization parameters
+     */
+    getPowerSystemOptimization(config) {
+        const totalWeight = this.calculator.calculateFPVDroneWeight(config);
+        const thrust = this.calculator.calculateThrust(config);
+        const hoverThrust = totalWeight * 9.81 / 4; // Divide by 4 motors, convert g to N
+        
+        // Optimal power calculations from README
+        const optimalPowerMin = hoverThrust * 2.5;
+        const optimalPowerMax = hoverThrust * 3.5;
+        
+        // Motor thermal modeling
+        const thermalResistance = 8; // °C/W - typical for mini quad motors
+        const motorEfficiency = this.calculator.calculateMotorEfficiency(config);
+        const inputPower = thrust / 10; // Simplified power calculation in watts
+        const powerLoss = inputPower * (1 - motorEfficiency/100);
+        const tempRise = powerLoss * thermalResistance;
+        
+        return {
+            optimalPowerMin,
+            optimalPowerMax,
+            currentPower: thrust / 10, // Simplified
+            efficiency: motorEfficiency,
+            thermalRise: tempRise
+        };
+    }
+    
+    /**
+     * Calculate frame geometry effects
+     */
+    getFrameGeometryEffects(config) {
+        const frameSize = config.frameSize;
+        
+        // Arm lengths based on frame size in mm
+        const armLengths = {
+            '3inch': 65,
+            '5inch': 110,
+            '7inch': 160,
+            '10inch': 225
+        };
+        
+        // Approximate stiffness (k) values
+        const armStiffness = {
+            '3inch': 75,
+            '5inch': 60,
+            '7inch': 45,
+            '10inch': 30
+        };
+        
+        // Calculate natural frequency: f = (1/2π) × √(k/m)
+        const armLength = armLengths[frameSize];
+        const stiffness = armStiffness[frameSize];
+        const motorWeight = this.getComponentWeight('motor', config);
+        const naturalFrequency = (1/(2 * Math.PI)) * Math.sqrt(stiffness/motorWeight) * 10;
+        
+        // X vs H configuration yaw authority calculation
+        const xConfigYawAuthority = 1.0;
+        const hConfigYawAuthority = 0.85; // 15% less yaw authority
+        
+        return {
+            armLength,
+            naturalFrequency,
+            propwashResistance: naturalFrequency > 120 ? 'Good' : 'Moderate',
+            xConfigYawBoost: `${Math.round((xConfigYawAuthority/hConfigYawAuthority - 1) * 100)}%`,
+            cgToleranceLongitudinal: '±3mm',
+            cgToleranceLateral: '±2mm'
+        };
+    }
+    
+    /**
+     * Get component weight by type
+     */
+    getComponentWeight(type, config) {
+        const components = this.getWeightBreakdown(config);
+        
+        switch(type) {
+            case 'motor':
+                return this.calculator.droneType === 'fpv' ? 
+                    components.motors / 4 : // Divide by 4 for single motor weight
+                    components.motor;
+            default:
+                return components[type] || 0;
+        }
+    }
+    
+    /**
+     * Analyze radio system performance
+     */
+    getRadioSystemAnalysis(protocol, txPower) {
+        const protocols = {
+            'crsf': {
+                latency: '4-6ms',
+                refreshRate: '150/250/500Hz',
+                resilience: 'Very High (FHSS)'
+            },
+            'elrs': {
+                latency: '2-5ms', 
+                refreshRate: '250/500/1000Hz',
+                resilience: 'Extremely High (FHSS+TDMA)'
+            },
+            'frsky_d8': {
+                latency: '18-22ms',
+                refreshRate: '50Hz',
+                resilience: 'Moderate (FHSS)'
+            },
+            'frsky_d16': {
+                latency: '12-15ms',
+                refreshRate: '100Hz',
+                resilience: 'High (FHSS)'
+            },
+            'spektrum': {
+                latency: '12-14ms',
+                refreshRate: '91Hz',
+                resilience: 'Moderate'
+            }
+        };
+        
+        // Link budget calculation (simplified)
+        const txPowerDbm = 10 * Math.log10(txPower) + 30; // Convert mW to dBm
+        const frequency = protocol === 'elrs' ? 2.4 : 0.9; // GHz - 2.4GHz or 900MHz
+        const txGain = 2.15; // dBi
+        const rxGain = 2.15; // dBi
+        
+        // Free space path loss calculation at 1km
+        const distance = 1; // km
+        const fspl = 20 * Math.log10(distance) + 20 * Math.log10(frequency * 1000) - 27.55;
+        
+        // Range estimation
+        const rxSensitivity = -90; // dBm typical
+        const linkBudget = txPowerDbm + txGain + rxGain - fspl;
+        const margin = linkBudget - rxSensitivity;
+        
+        // Effective range (km) = 10^((margin)/20) assuming free space
+        const effectiveRange = Math.pow(10, margin/20);
+        
+        return {
+            ...protocols[protocol] || protocols['frsky_d16'],
+            linkBudget: `${linkBudget.toFixed(1)} dBm`,
+            theoreticalRange: `${effectiveRange.toFixed(1)} km`
+        };
+    }
 }
