@@ -266,7 +266,7 @@ footer {
   margin: 15px 0 10px;
   font-size: 1.1rem;
   font-weight: 500;
-  color: #6c63ff; /* Change to match primary color variable */
+  color: #a49cff; /* Changed from #6c63ff to a lighter shade */
   text-align: center;
   padding-bottom: 5px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);

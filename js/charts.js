@@ -974,7 +974,7 @@ class DroneCharts {
                             font: { size: 11 }
                         },
                         ticks: {
-                            callback: (value) => `${Math.round(value * 100)}%`
+                            callback: (value) => `${(value * 100).toFixed(1)}%` // Fixed to 1 decimal place
                         }
                     },
                     x: {
