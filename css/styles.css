@@ -266,7 +266,10 @@ footer {
   margin: 15px 0 10px;
   font-size: 1.1rem;
   font-weight: 500;
-  color: var(--primary);
+  color: #6c63ff; /* Change to match primary color variable */
+  text-align: center;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .component-analysis {
@@ -278,10 +281,21 @@ footer {
 
 .impact-item {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   padding: 8px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   font-size: 0.9rem;
+}
+
+.impact-item span:first-child {
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.impact-item span:last-child {
+  color: rgba(255, 255, 255, 0.8);
+  padding-left: 10px;
 }
 
 .impact-item:last-child {

@@ -334,7 +334,7 @@ class DroneCalculator {
         // Calculate power to weight ratio (W/kg)
         const ratio = power / weightKg;
         
-        // Return a simplified ratio for display
+        // Return a simplified ratio for display with 1 decimal place
         return (ratio / 100).toFixed(1) + ":1";
     }
 
@@ -373,7 +373,7 @@ class DroneCalculator {
         const signalRange = baseRange * powerFactor * systemFactor * aircraftFactor;
         
         // The actual range is limited by the shorter of the two factors
-        return Math.min(timeBasedRange, signalRange).toFixed(0);
+        return Math.round(Math.min(timeBasedRange, signalRange));
     }
 
     calculateBatteryDischargeRate(config, totalWeight) {

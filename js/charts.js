@@ -693,6 +693,7 @@ class DroneCharts {
                 { ...this.getCurrentConfig(), [Object.keys(data[0].option)[0]]: d.option },
                 d.weight
             );
+            // Make sure we only get the numeric part and parse it as a float
             return parseFloat(pwrStr.split(':')[0]);
         });
         
