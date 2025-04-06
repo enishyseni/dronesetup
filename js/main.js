@@ -79,19 +79,44 @@ document.addEventListener('DOMContentLoaded', function() {
         return config;
     }
     
-    // Function to update all result displays
+    // Enhanced function to update results
     function updateResults() {
         const config = getCurrentConfig();
+        
+        // Calculate metrics using the already initialized calculator
         const metrics = calculator.calculateAllMetrics(config);
+        
+        // Use the existing analyzer instance that was properly initialized
+        const analysisData = componentAnalyzer.analyzeConfiguration(config);
+        
+        // Update UI with calculations
+        safelyUpdateElementText('heaviestComponent', analysisData.heaviestComponent);
+        safelyUpdateElementText('limitingFactor', analysisData.limitingFactor);
+        safelyUpdateElementText('suggestedImprovement', analysisData.suggestedImprovement);
+        
+        // Update power system optimization details if these elements exist
+        if (document.getElementById('optimalPowerBand')) {
+            const powerSystemData = componentAnalyzer.getPowerSystemOptimization(config);
+            document.getElementById('optimalPowerBand').textContent = 
+                `${powerSystemData.optimalPowerBand.min}W - ${powerSystemData.optimalPowerBand.max}W`;
+        }
+        
+        if (document.getElementById('maxRPM')) {
+            const motorKv = parseInt(config.motorKv);
+            const batteryType = config.batteryType.split('-')[0];
+            const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
+            const cellVoltage = batteryType === 'lipo' ? 3.7 : 3.6;
+            const batteryVoltage = cellCount * cellVoltage;
+            const maxRPM = calculator.calculateMaxRPM(motorKv, batteryVoltage);
+            document.getElementById('maxRPM').textContent = `${maxRPM.toFixed(0)} RPM`;
+        }
         
         // Update basic metrics that are likely to exist
         safelyUpdateElementText('totalWeight', `${metrics.totalWeight}`);
         safelyUpdateElementText('flightTime', `${metrics.flightTime}`);
         safelyUpdateElementText('maxSpeed', `${metrics.maxSpeed}`);
-        safelyUpdateElementText('pwr', `${metrics.powerToWeight}`); // Fix: Changed from powerToWeightRatio to powerToWeight
+        safelyUpdateElementText('pwr', `${metrics.powerToWeight}`);
         safelyUpdateElementText('range', `${metrics.range}`);
-        
-        // Fix: Add missing metrics
         safelyUpdateElementText('payloadCapacity', `${metrics.payloadCapacity}`);
         safelyUpdateElementText('dischargeRate', `${metrics.dischargeRate}`);
         safelyUpdateElementText('hoverCurrent', `${metrics.hoverCurrent}`);
@@ -100,9 +125,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (document.querySelector('.advanced-metrics')) {
             updateAdvancedMetrics(config);
         }
-        
-        // Update suggestion
-        safelyUpdateElementText('suggestedImprovement', componentAnalyzer.getSuggestedImprovement(config));
     }
     
     // Helper function to safely update element text only if element exists

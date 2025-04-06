@@ -1,6 +1,8 @@
 class ComponentAnalyzer {
     constructor(calculator) {
         this.calculator = calculator;
+        // Initialize droneType directly from calculator if available
+        this.droneType = calculator ? calculator.droneType : 'fpv';
     }
 
     // Add a method to update the drone type if calculator changes it
@@ -14,7 +16,8 @@ class ComponentAnalyzer {
     getWeightBreakdown(config) {
         const components = {};
         
-        if (this.calculator.droneType === 'fpv') {
+        // Use this.droneType directly instead of accessing through calculator
+        if (this.droneType === 'fpv') {
             // Frame weight
             const frameWeights = {
                 '3inch': 80,
@@ -234,7 +237,7 @@ class ComponentAnalyzer {
     getLimitingFactor(config) {
         // Calculate weight first
         let totalWeight;
-        if (this.calculator.droneType === 'fpv') {
+        if (this.droneType === 'fpv') {
             totalWeight = this.calculator.calculateFPVDroneWeight(config);
         } else {
             totalWeight = this.calculator.calculateFixedWingWeight(config);
@@ -251,7 +254,7 @@ class ComponentAnalyzer {
         // Get thrust
         let thrustToWeight = 0;
         
-        if (this.calculator.droneType === 'fpv') {
+        if (this.droneType === 'fpv') {
             const frameSize = parseInt(config.frameSize.replace('inch', ''));
             const kvFactor = parseInt(config.motorKv) / 1000;
             
@@ -415,25 +418,36 @@ class ComponentAnalyzer {
      * Get propeller efficiency data
      */
     getPropEfficiencyData(config) {
-        // This would be based on prop size and pitch
-        const frameSize = this.calculator.droneType === 'fpv' ? 
-            parseInt(config.frameSize.replace('inch', '')) : 
-            parseInt(config.wingspan) / 200;
-            
-        // Larger props are more efficient
-        const baseEfficiency = 0.4 + (frameSize * 0.05);
+        const motorKv = parseInt(config.motorKv);
+        const batteryVoltage = this.getBatteryVoltage(config);
+        const propSize = parseFloat(config.frameSize || config.wingspan);
         
-        // Create efficiency curve across different throttle levels
-        const throttleLevels = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
-        return throttleLevels.map(throttle => {
-            // Propellers are most efficient at mid throttle
-            const throttleFactor = 1 - Math.pow((throttle - 50) / 50, 2);
-            const efficiency = baseEfficiency * throttleFactor;
+        // Calculate optimal RPM: Optimal RPM range = 2300 × prop diameter in inches
+        const optimalRPM = 2300 * propSize;
+        
+        // Sample RPM range from 50% to 150% of optimal
+        const rpmPoints = [0.5, 0.75, 1.0, 1.25, 1.5];
+        
+        // Propeller constant for efficiency calculation
+        const propConstant = 0.12; // Example value
+        
+        return rpmPoints.map(factor => {
+            const rpm = optimalRPM * factor;
+            const throttlePercent = (rpm / (motorKv * batteryVoltage)) * 100;
             
-            // Ensure exactly 1 decimal place by using a more robust approach
+            // Simplified thrust calculation
+            const thrust = 0.5 * Math.pow(rpm/1000, 2) * propSize;
+            
+            // Simplified power calculation
+            const power = throttlePercent/100 * batteryVoltage * (batteryVoltage/motorKv);
+            
+            // Efficiency: η = (Thrust² ÷ Power) × k
+            const efficiency = (Math.pow(thrust, 2) / power) * propConstant;
+            
             return {
-                throttle: throttle,
-                efficiency: Number((Math.floor(efficiency * 10) / 10).toFixed(1))
+                rpmFactor: factor.toFixed(2),
+                rpm: rpm.toFixed(0),
+                efficiency: Math.min(100, efficiency).toFixed(2)
             };
         });
     }
@@ -634,5 +648,28 @@ class ComponentAnalyzer {
             linkBudget: `${linkBudget.toFixed(1)} dBm`,
             theoreticalRange: `${effectiveRange.toFixed(1)} km`
         };
+    }
+    
+    /**
+     * Get battery voltage based on configuration
+     */
+    getBatteryVoltage(config) {
+        const batteryType = config.batteryType.split('-')[0];
+        const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
+        const cellVoltage = batteryType === 'lipo' ? 3.7 : 3.6;
+        return cellCount * cellVoltage;
+    }
+    
+    /**
+     * Get total drone weight
+     */
+    getTotalWeight(config) {
+        if (!this.calculator) {
+            return 500; // Default fallback if calculator not available
+        }
+        
+        return this.droneType === 'fpv' ? 
+            this.calculator.calculateFPVDroneWeight(config) : 
+            this.calculator.calculateFixedWingWeight(config);
     }
 }

@@ -679,4 +679,72 @@ class DroneCalculator {
         
         return protocolLatencies[protocol] || 15; // Default if unknown
     }
+
+    // Add methods for calculations mentioned in README
+    
+    /**
+     * Calculate motor max RPM based on KV rating and battery voltage
+     * Formula: Max RPM = KV rating × Battery voltage
+     */
+    calculateMaxRPM(kvRating, batteryVoltage) {
+        return kvRating * batteryVoltage;
+    }
+    
+    /**
+     * Calculate thrust using the thrust coefficient formula
+     * T = Ct × ρ × n² × D⁴ (where Ct is thrust coefficient, ρ is air density, n is rotational speed, D is prop diameter)
+     */
+    calculateThrust(thrustCoefficient, airDensity, rotationalSpeed, propDiameter) {
+        // Standard air density at sea level is approximately 1.225 kg/m³ if not provided
+        airDensity = airDensity || 1.225;
+        return thrustCoefficient * airDensity * Math.pow(rotationalSpeed, 2) * Math.pow(propDiameter, 4);
+    }
+    
+    /**
+     * Calculate efficiency
+     * η = (Thrust² ÷ Power) × k (where k is prop constant)
+     */
+    calculateEfficiency(thrust, power, propConstant) {
+        return (Math.pow(thrust, 2) / power) * propConstant;
+    }
+    
+    /**
+     * Calculate optimal RPM range
+     * Optimal RPM range = 2300 × prop diameter in inches
+     */
+    calculateOptimalRPM(propDiameterInches) {
+        return 2300 * propDiameterInches;
+    }
+    
+    /**
+     * Calculate current draw estimation
+     * I = (Thrust × 3.5) ÷ Voltage
+     */
+    calculateCurrentDraw(thrust, voltage) {
+        return (thrust * 3.5) / voltage;
+    }
+    
+    /**
+     * Calculate motor efficiency
+     * η = (Mechanical power out ÷ Electrical power in) × 100%
+     */
+    calculateMotorEfficiency(mechanicalPowerOut, electricalPowerIn) {
+        return (mechanicalPowerOut / electricalPowerIn) * 100;
+    }
+    
+    /**
+     * Calculate thermal modeling
+     * T_rise = P_loss × R_thermal (°C)
+     */
+    calculateTemperatureRise(powerLoss, thermalResistance) {
+        return powerLoss * thermalResistance;
+    }
+    
+    /**
+     * Calculate rates for flight dynamics
+     * Max rotation rate = deg/sec = (RC_Rate × Super_Rate × 200)
+     */
+    calculateMaxRotationRate(rcRate, superRate) {
+        return rcRate * superRate * 200;
+    }
 }
