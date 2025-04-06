@@ -9,6 +9,7 @@
       href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
       rel="stylesheet"
     />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body>
     <div class="container">
@@ -49,11 +50,14 @@
           </div>
 
           <div class="config-section">
-            <label for="batteryType">Battery Type</label>
+            <label for="batteryType">Battery Chemistry</label>
             <select id="batteryType" class="glass-select">
-              <option value="3s">3S LiPo</option>
-              <option value="4s" selected>4S LiPo</option>
-              <option value="6s">6S LiPo</option>
+              <option value="lipo-3s">3S LiPo</option>
+              <option value="lipo-4s" selected>4S LiPo</option>
+              <option value="lipo-6s">6S LiPo</option>
+              <option value="liion-3s">3S Li-Ion</option>
+              <option value="liion-4s">4S Li-Ion</option>
+              <option value="liion-6s">6S Li-Ion</option>
             </select>
           </div>
 
@@ -64,6 +68,8 @@
               <option value="1500" selected>1500mAh</option>
               <option value="2200">2200mAh</option>
               <option value="3000">3000mAh</option>
+              <option value="4000">4000mAh</option>
+              <option value="5000">5000mAh</option>
             </select>
           </div>
 
@@ -72,6 +78,7 @@
             <select id="flightController" class="glass-select">
               <option value="f4" selected>F4</option>
               <option value="f7">F7</option>
+              <option value="h7">H7</option>
             </select>
           </div>
 
@@ -80,6 +87,17 @@
             <select id="camera" class="glass-select">
               <option value="analog" selected>Analog</option>
               <option value="digital">Digital HD</option>
+              <option value="digital4k">Digital 4K</option>
+            </select>
+          </div>
+
+          <div class="config-section">
+            <label for="vtxPower">VTX Power</label>
+            <select id="vtxPower" class="glass-select">
+              <option value="25">25mW</option>
+              <option value="200" selected>200mW</option>
+              <option value="600">600mW</option>
+              <option value="1000">1000mW</option>
             </select>
           </div>
 
@@ -104,7 +122,21 @@
         </div>
 
         <div class="visualization glass-panel">
-          <div id="model-container"></div>
+          <h2>Performance Graphs</h2>
+          <div class="chart-container">
+            <div class="chart-wrapper">
+              <canvas id="speedChart"></canvas>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="flightTimeChart"></canvas>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="rangeChart"></canvas>
+            </div>
+            <div class="chart-wrapper">
+              <canvas id="efficiencyChart"></canvas>
+            </div>
+          </div>
         </div>
 
         <div class="results glass-panel">
@@ -129,6 +161,18 @@
             <span>Power-to-Weight Ratio:</span>
             <span id="powerToWeight">0:1</span>
           </div>
+          <div class="result-item">
+            <span>Range (Line of Sight):</span>
+            <span id="range">0 m</span>
+          </div>
+          <div class="result-item">
+            <span>Battery Discharge Rate:</span>
+            <span id="dischargeRate">0 C</span>
+          </div>
+          <div class="result-item">
+            <span>Current Draw (Hover):</span>
+            <span id="hoverCurrent">0 A</span>
+          </div>
         </div>
       </main>
 
@@ -139,10 +183,8 @@
       </footer>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
-    <script src="js/models.js"></script>
     <script src="js/calculations.js"></script>
+    <script src="js/charts.js"></script>
     <script src="js/main.js"></script>
   </body>
 </html>

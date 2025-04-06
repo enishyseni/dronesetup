@@ -2,8 +2,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize the calculator
     const calculator = new DroneCalculator();
     
-    // Initialize 3D model renderer
-    const modelRenderer = new DroneModelRenderer('model-container');
+    // Initialize charts
+    const droneCharts = new DroneCharts(calculator);
+    droneCharts.initCharts();
     
     // Get all configuration inputs
     const configInputs = document.querySelectorAll('.glass-select');
@@ -32,9 +33,13 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('payloadCapacity').textContent = results.payloadCapacity;
         document.getElementById('maxSpeed').textContent = results.maxSpeed;
         document.getElementById('powerToWeight').textContent = results.powerToWeight;
+        document.getElementById('range').textContent = results.range;
+        document.getElementById('dischargeRate').textContent = results.dischargeRate;
+        document.getElementById('hoverCurrent').textContent = results.hoverCurrent;
         
-        // Update 3D model based on configuration
-        modelRenderer.updateModelBasedOnConfig(config);
+        // Update charts - default to comparing battery types
+        const chartMetric = calculator.droneType === 'fpv' ? 'batteryType' : 'batteryType';
+        droneCharts.updateCharts(config, chartMetric);
     }
     
     // Function to toggle between drone types
@@ -43,11 +48,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (isFPV) {
             calculator.setDroneType('fpv');
-            modelRenderer.setDroneType('fpv');
             fixedWingOnlyElements.forEach(el => el.classList.add('hidden'));
         } else {
             calculator.setDroneType('fixedWing');
-            modelRenderer.setDroneType('fixedWing');
             fixedWingOnlyElements.forEach(el => el.classList.remove('hidden'));
         }
         
@@ -56,7 +59,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Event listeners for configuration changes
     configInputs.forEach(input => {
-        input.addEventListener('change', updateResults);
+        input.addEventListener('change', function() {
+            updateResults();
+            
+            // When user changes a parameter, update charts to compare different values of that parameter
+            droneCharts.updateCharts(getCurrentConfig(), this.id);
+        });
     });
     
     // Event listener for drone type toggle
