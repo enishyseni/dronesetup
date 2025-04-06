@@ -14,12 +14,28 @@ class DroneCharts {
         Chart.defaults.color = '#ffffff';
         Chart.defaults.font.family = "'Roboto', sans-serif";
         Chart.defaults.scale.grid.color = 'rgba(255, 255, 255, 0.1)';
+        
+        // Set responsive options
+        Chart.defaults.responsive = true;
+        Chart.defaults.maintainAspectRatio = false;
 
         // Create empty charts
         this.createSpeedChart([]);
         this.createFlightTimeChart([]);
         this.createRangeChart([]);
         this.createEfficiencyChart([]);
+        
+        // Add resize event listener to handle chart resizing
+        window.addEventListener('resize', this.handleResize.bind(this));
+    }
+    
+    handleResize() {
+        // Update all charts on window resize
+        Object.values(this.charts).forEach(chart => {
+            if (chart) {
+                chart.resize();
+            }
+        });
     }
 
     createSpeedChart(data) {
@@ -50,7 +66,11 @@ class DroneCharts {
                         display: true,
                         text: 'Maximum Speed Comparison',
                         font: {
-                            size: 16
+                            size: 14
+                        },
+                        padding: {
+                            top: 5,
+                            bottom: 5
                         }
                     },
                     legend: {
@@ -62,7 +82,22 @@ class DroneCharts {
                         beginAtZero: true,
                         title: {
                             display: true,
-                            text: 'Speed (km/h)'
+                            text: 'Speed (km/h)',
+                            font: {
+                                size: 12
+                            }
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: {
+                                size: 11
+                            }
                         }
                     }
                 }
@@ -252,5 +287,14 @@ class DroneCharts {
         this.createFlightTimeChart(data);
         this.createRangeChart(data);
         this.createEfficiencyChart(data);
+        
+        // Force layout update for charts
+        setTimeout(() => {
+            Object.values(this.charts).forEach(chart => {
+                if (chart) {
+                    chart.resize();
+                }
+            });
+        }, 100);
     }
 }
