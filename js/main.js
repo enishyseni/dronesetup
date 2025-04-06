@@ -87,9 +87,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update basic metrics that are likely to exist
         safelyUpdateElementText('totalWeight', `${metrics.totalWeight}`);
         safelyUpdateElementText('flightTime', `${metrics.flightTime}`);
-        safelyUpdateElementText('maxSpeed', `${metrics.maxSpeed} km/h`);
-        safelyUpdateElementText('pwr', `${metrics.powerToWeightRatio}`);
+        safelyUpdateElementText('maxSpeed', `${metrics.maxSpeed}`);
+        safelyUpdateElementText('pwr', `${metrics.powerToWeight}`); // Fix: Changed from powerToWeightRatio to powerToWeight
         safelyUpdateElementText('range', `${metrics.range}`);
+        
+        // Fix: Add missing metrics
+        safelyUpdateElementText('payloadCapacity', `${metrics.payloadCapacity}`);
+        safelyUpdateElementText('dischargeRate', `${metrics.dischargeRate}`);
+        safelyUpdateElementText('hoverCurrent', `${metrics.hoverCurrent}`);
         
         // Update advanced metrics only if enabled in the UI
         if (document.querySelector('.advanced-metrics')) {
