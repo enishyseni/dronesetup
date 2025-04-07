@@ -1,40 +1,19 @@
 # DroneSetup
 
-DroneSetup is a comprehensive web platform designed to help drone enthusiasts, professionals, and beginners with the setup, configuration, and maintenance of their drones.
+A comprehensive tool for configuring and analyzing FPV and fixed-wing drones.
 
 ## Overview
 
-DroneSetup provides a user-friendly interface for drone owners to:
+DroneSetup helps drone enthusiasts and builders optimize their setups by providing real-time feedback on various performance parameters. It allows you to configure both FPV (First Person View) quadcopters and fixed-wing aircraft, offering detailed insights into flight performance based on component selection.
 
-- Configure their drone settings
-- Access detailed setup guides for various drone models
-- Troubleshoot common drone issues
-- Connect with other drone enthusiasts
-- Stay updated with the latest drone technologies and regulations
+## Features
 
-## Key Features
-
-- **Drone Configuration Wizard**: Step-by-step setup guide for different drone models
-- **Component Compatibility Checker**: Verify if upgrades and accessories are compatible with your drone
-- **Firmware Update Guide**: Instructions for safely updating your drone's firmware
-- **Calibration Tools**: Assistance with calibrating sensors, cameras, and flight controls
-- **Community Forum**: Connect with other drone users for advice and sharing experiences
-- **Troubleshooting Database**: Common issues and their solutions
-- **Regulatory Information**: Up-to-date information on drone laws and regulations
-
-## Getting Started
-
-1. Create an account to personalize your experience
-2. Add your drone model(s) to your profile
-3. Access tailored guides and information specific to your equipment
-4. Join the community to ask questions and share your knowledge
-
-## Technologies Used
-
-- Frontend: HTML, CSS, JavaScript
-- Backend: [Your backend technologies]
-- Database: [Your database technology]
-- Authentication: [Your auth system]
+- Interactive component selection with real-time performance calculations
+- Support for both FPV quadcopters and fixed-wing aircraft
+- Comprehensive weight, power, and flight time estimations
+- Component analysis to identify limiting factors and suggest improvements
+- In-depth technical calculations based on physics and engineering principles
+- Comparison tools to understand how component changes affect performance
 
 ## Technical Analysis: FPV Drone Components & Performance
 
@@ -62,61 +41,19 @@ DroneSetup provides a user-friendly interface for drone owners to:
   - Efficiency curve calculation: η = (Thrust² ÷ Power) × k (where k is prop constant)
   - Optimal RPM range = 2300 × prop diameter in inches
 
-#### Power Distribution
-
-- **Batteries**: Cell count (S rating) and capacity (mAh) balance flight time vs weight
-  - Flight time estimation: t = (Battery capacity × 0.8 × 60) ÷ (Average amp draw × 1000) minutes
-  - Weight impact: Every 100g added reduces flight time by approximately 10-15%
-- **Power-to-Weight Ratio**: Critical for performance calculation
-  - Minimum for stable flight: 2:1
-  - Acrobatic performance: 7:1 or greater
-  - Formula: PWR = Total thrust ÷ All-up weight
-
-##### ESC Selection and Operation
-
-- **ESC Protocol Impact**:
-  - DShot600/1200: Reduced latency by 5-8ms compared to Oneshot125
-  - RPM filtering efficiency = 60-80% noise reduction vs traditional gyro filters
-- **BLHeli_32 Features**:
-  - Current limiting = Max Battery Amps ÷ Number of Motors
-  - Electrical noise: Timing advance increases power by 3-7% but adds 10-15% heat
-- **Capacitor Filtering**:
-  - Low ESR capacitors: 1000μF per 10A of current draw
-  - Voltage spikes reduced by: ΔV = I × (L ÷ C)^0.5
-  - Placement impact: Within 2cm of ESC reduces noise by ~40%
-
-#### Frame & Materials
-
-- **Carbon Fiber**: Most common material (3K, 4K, etc. indicates carbon fiber weave density)
-  - 3mm thickness provides optimal strength-to-weight for most 5" builds
-  - Tensile strength: ~3.5 GPa, Density: ~1.7 g/cm³
-- **Aluminum**: Used for motor mounts and hardware
-  - Good heat dissipation properties
-  - Adds weight but improves motor cooling
-- **TPU**: Used for 3D-printed components (camera mounts, antenna holders)
-  - Shore hardness (95A typical) affects impact absorption
-
-##### Frame Geometry Effects
-
-- **Weight Distribution**:
-  - Center of Gravity offset tolerance: ±3mm longitudinal, ±2mm lateral
-  - Moment of inertia calculation: I = Σmr² (where m is component mass, r is distance from CG)
-  - X vs H configuration: X provides 12-15% better yaw authority
-- **Structural Resonance**:
-  - Natural frequency calculation: f = (1÷2π) × √(k÷m) where k is stiffness
-  - Propwash handling improves with frame frequencies > 120Hz
-  - Arm thickness impact: 4mm vs 5mm arms show 30-40% difference in flex under 2kg thrust
-
 #### Flight Controller & Software
 
-- **Gyro Update Rates**: Higher rates improve responsiveness
-  - 8kHz gyro with 4kHz PID loop is standard for racing
-- **Filtering**: Notch filters and dynamic filtering remove motor noise
-  - Motor vibrations occur at frequencies = (RPM ÷ 60) × number of motor poles × propeller blades
-- **PID Tuning Impact**:
-  - P-gain: directly proportional to stick responsiveness
-  - I-gain: affects how drone holds position against external forces
-  - D-gain: dampens oscillations but increases motor temperature
+- **Flight Controller Processing Power**:
+  - F4 processor: ~8kHz gyro loop processing
+  - F7 processor: ~12kHz gyro loop processing, higher precision math
+- **PID Controllers**:
+  - P-term (Proportional): Immediate correction response, higher values = faster response
+  - I-term (Integral): Error accumulation correction, higher values = less drift
+  - D-term (Derivative): Dampens oscillations, higher values = more stability but more noise
+- **Filters**:
+  - Low-pass filtering reduces noise but adds latency
+  - Notch filters target specific frequency ranges
+  - Dynamic filters adapt to motor/prop resonance frequencies
 
 ##### Advanced Flight Controller Configuration
 
@@ -152,31 +89,25 @@ DroneSetup provides a user-friendly interface for drone owners to:
 
 ### Signal Systems & Radio Frequency Analysis
 
-#### Radio Control Systems
+#### Radio Control Links
 
 - **Protocol Latency Comparison**:
-  | Protocol | Latency (ms) | Refresh Rate (Hz) | Resilience to Interference |
-  |---------------|--------------|-------------------|----------------------------|
-  | CRSF | 4-6 | 150/250/500 | Very High (FHSS) |
-  | ELRS 2.4GHz | 2-5 | 250/500/1000 | Extremely High (FHSS+TDMA) |
-  | FrSky D8 | 18-22 | 50 | Moderate (FHSS) |
-  | FrSky D16 | 12-15 | 100 | High (FHSS) |
-  | Spektrum DSM2 | 12-14 | 91 | Moderate |
+  - ExpressLRS: 2-5ms at 500Hz refresh rate
+  - CRSF: 4-6ms at 150Hz refresh rate
+  - FrSky D16: 12-15ms at 100Hz refresh rate
+- **Link Budget Calculation**:
+  - Receiver sensitivity = -90dBm (typical)
+  - Free space path loss = 20log₁₀(d) + 20log₁₀(f) - 27.55
+  - Maximum range = 10^((TX_power + TX_gain + RX_gain - losses - RX_sensitivity) ÷ 20)
 
-- **Range Calculation**:
-  - Link budget: P_rx = P_tx + G_tx - L_path + G_rx (dBm)
-  - Free space path loss: L = 20log₁₀(d) + 20log₁₀(f) - 27.55
-  - Effective control range estimation: R = √(P_tx × G_tx × G_rx × λ²/(16π² × P_min))
+#### Video Transmission
 
-#### Video Transmission Systems
-
-- **Analog vs Digital**:
-  - Latency comparison: Analog (5-10ms) vs DJI (28-35ms) vs HDZero (18-24ms)
-  - SNR requirements: Analog (13dB for usable image) vs Digital (18dB for zero artifacting)
-- **Frequency Management**:
-  - Adjacent channel rejection: ACR = 10log₁₀(P_desired ÷ P_adjacent) dB
-  - Multi-pilot setup: Minimum separation = 40MHz (5.8GHz band)
-  - Intermodulation products: f_IM3 = 2f₁ - f₂ and 2f₂ - f₁ (avoid for 3+ pilots)
+- **Analog vs Digital Comparisons**:
+  - Analog: Lower latency (20-40ms), lower clarity, susceptible to interference
+  - Digital: Higher latency (30-100ms), higher clarity, better noise rejection
+- **Range vs Resolution Trade-off**:
+  - Range extension: 1.4× improvement per each 3dB gain in Effective Radiated Power
+  - 5.8GHz band attenuation: -0.4dB/100m in clear air
 
 ### Applied Configuration Calculator Formulas
 
@@ -203,10 +134,45 @@ These tools perform real-time calculations as you select components, providing i
 
 DroneSetup's configuration tools automatically calculate these parameters based on your component selection, helping you build a balanced, efficient FPV drone tailored to your flying style.
 
+## Installation
+
+1. Clone the repository
+2. Open index.html in your browser
+3. Start configuring your drone!
+
 ## Contributing
 
-Contributions to improve DroneSetup are welcome! Please see our contributing guidelines for more information.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-[Your chosen license]
+This project is licensed under the MIT License - see below for details:
+
+```
+MIT License
+
+Copyright (c) 2023 DroneSetup
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+## Acknowledgments
+
+- Thanks to the drone community for sharing knowledge and expertise
+- All contributors who have helped develop and test this tool
