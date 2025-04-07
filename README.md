@@ -2,6 +2,8 @@
 
 A comprehensive tool for configuring and analyzing FPV and fixed-wing drones.
 
+![DroneSetup FPV Optimizer Screenshot](fpvoptimizer.jpg)
+
 ## Overview
 
 DroneSetup helps drone enthusiasts and builders optimize their setups by providing real-time feedback on various performance parameters. It allows you to configure both FPV (First Person View) quadcopters and fixed-wing aircraft, offering detailed insights into flight performance based on component selection.
