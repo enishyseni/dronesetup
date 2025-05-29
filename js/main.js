@@ -1,12 +1,16 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize the calculator
-    const calculator = new DroneCalculator();
+    // Initialize the calculator with error handling
+    let calculator, componentAnalyzer, droneCharts;
     
-    // Initialize component analyzer
-    const componentAnalyzer = new ComponentAnalyzer(calculator);
-    
-    // Initialize charts with analyzer - SIMPLIFIED
-    const droneCharts = new DroneCharts(calculator, componentAnalyzer);
+    try {
+        calculator = new DroneCalculator();
+        componentAnalyzer = new ComponentAnalyzer(calculator);
+        droneCharts = new DroneCharts(calculator, componentAnalyzer);
+    } catch (error) {
+        console.error('Failed to initialize calculators:', error);
+        showUserError('Failed to initialize application. Please refresh the page.');
+        return;
+    }
     
     // Get all configuration inputs
     const configInputs = document.querySelectorAll('.glass-select');
@@ -79,51 +83,75 @@ document.addEventListener('DOMContentLoaded', function() {
         return config;
     }
     
-    // Enhanced function to update results
+    // Enhanced function to update results with error handling
     function updateResults() {
-        const config = getCurrentConfig();
-        
-        // Calculate metrics using the already initialized calculator
-        const metrics = calculator.calculateAllMetrics(config);
-        
-        // Use the existing analyzer instance that was properly initialized
-        const analysisData = componentAnalyzer.analyzeConfiguration(config);
-        
-        // Update UI with calculations
-        safelyUpdateElementText('heaviestComponent', analysisData.heaviestComponent);
-        safelyUpdateElementText('limitingFactor', analysisData.limitingFactor);
-        safelyUpdateElementText('suggestedImprovement', analysisData.suggestedImprovement);
-        
-        // Update power system optimization details if these elements exist
-        if (document.getElementById('optimalPowerBand')) {
-            const powerSystemData = componentAnalyzer.getPowerSystemOptimization(config);
-            document.getElementById('optimalPowerBand').textContent = 
-                `${powerSystemData.optimalPowerBand.min}W - ${powerSystemData.optimalPowerBand.max}W`;
-        }
-        
-        if (document.getElementById('maxRPM')) {
-            const motorKv = parseInt(config.motorKv);
-            const batteryType = config.batteryType.split('-')[0];
-            const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
-            const cellVoltage = batteryType === 'lipo' ? 3.7 : 3.6;
-            const batteryVoltage = cellCount * cellVoltage;
-            const maxRPM = calculator.calculateMaxRPM(motorKv, batteryVoltage);
-            document.getElementById('maxRPM').textContent = `${maxRPM.toFixed(0)} RPM`;
-        }
-        
-        // Update basic metrics that are likely to exist
-        safelyUpdateElementText('totalWeight', `${metrics.totalWeight}`);
-        safelyUpdateElementText('flightTime', `${metrics.flightTime}`);
-        safelyUpdateElementText('maxSpeed', `${metrics.maxSpeed}`);
-        safelyUpdateElementText('pwr', `${metrics.powerToWeight}`);
-        safelyUpdateElementText('range', `${metrics.range}`);
-        safelyUpdateElementText('payloadCapacity', `${metrics.payloadCapacity}`);
-        safelyUpdateElementText('dischargeRate', `${metrics.dischargeRate}`);
-        safelyUpdateElementText('hoverCurrent', `${metrics.hoverCurrent}`);
-        
-        // Update advanced metrics only if enabled in the UI
-        if (document.querySelector('.advanced-metrics')) {
-            updateAdvancedMetrics(config);
+        try {
+            const config = getCurrentConfig();
+            
+            // Validate configuration
+            if (!calculator.validateConfig(config)) {
+                showUserWarning('Invalid configuration detected. Please check your settings.');
+                return;
+            }
+            
+            // Calculate metrics using the already initialized calculator
+            const metrics = calculator.calculateAllMetrics(config);
+            
+            // Use the existing analyzer instance that was properly initialized
+            const analysisData = componentAnalyzer.analyzeConfiguration(config);
+            
+            // Update UI with calculations
+            safelyUpdateElementText('heaviestComponent', analysisData.heaviestComponent);
+            safelyUpdateElementText('limitingFactor', analysisData.limitingFactor);
+            safelyUpdateElementText('suggestedImprovement', analysisData.suggestedImprovement);
+            
+            // Update overall score if element exists
+            if (analysisData.overallScore !== undefined) {
+                safelyUpdateElementText('overallScore', `${analysisData.overallScore}/100`);
+            }
+            
+            // Update optimization suggestions
+            if (analysisData.optimizationSuggestions && document.getElementById('optimizationSuggestions')) {
+                const suggestionsElement = document.getElementById('optimizationSuggestions');
+                suggestionsElement.innerHTML = analysisData.optimizationSuggestions
+                    .map(suggestion => `<li>${suggestion}</li>`)
+                    .join('');
+            }
+            
+            // Update power system optimization details if these elements exist
+            if (document.getElementById('optimalPowerBand')) {
+                const powerSystemData = componentAnalyzer.getPowerSystemOptimization(config);
+                document.getElementById('optimalPowerBand').textContent = 
+                    `${powerSystemData.optimalPowerBand.min}W - ${powerSystemData.optimalPowerBand.max}W`;
+            }
+            
+            if (document.getElementById('maxRPM')) {
+                const motorKv = parseInt(config.motorKv);
+                const batteryType = config.batteryType.split('-')[0];
+                const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
+                const cellVoltage = batteryType === 'lipo' ? 3.7 : 3.6;
+                const batteryVoltage = cellCount * cellVoltage;
+                const maxRPM = calculator.calculateMaxRPM(motorKv, batteryVoltage);
+                document.getElementById('maxRPM').textContent = `${maxRPM.toFixed(0)} RPM`;
+            }
+            
+            // Update basic metrics that are likely to exist
+            safelyUpdateElementText('totalWeight', `${metrics.totalWeight}`);
+            safelyUpdateElementText('flightTime', `${metrics.flightTime}`);
+            safelyUpdateElementText('maxSpeed', `${metrics.maxSpeed}`);
+            safelyUpdateElementText('pwr', `${metrics.powerToWeight}`);
+            safelyUpdateElementText('range', `${metrics.range}`);
+            safelyUpdateElementText('payloadCapacity', `${metrics.payloadCapacity}`);
+            safelyUpdateElementText('dischargeRate', `${metrics.dischargeRate}`);
+            safelyUpdateElementText('hoverCurrent', `${metrics.hoverCurrent}`);
+            
+            // Update advanced metrics only if enabled in the UI
+            if (document.querySelector('.advanced-metrics')) {
+                updateAdvancedMetrics(config);
+            }
+        } catch (error) {
+            console.error('Error updating results:', error);
+            showUserError('Error calculating results. Please check your configuration.');
         }
     }
     
@@ -273,6 +301,43 @@ document.addEventListener('DOMContentLoaded', function() {
         droneCharts.updateCharts(config, null);
     }
     
+    // Add user notification functions
+    function showUserError(message) {
+        createNotification(message, 'error');
+    }
+    
+    function showUserWarning(message) {
+        createNotification(message, 'warning');
+    }
+    
+    function showUserInfo(message) {
+        createNotification(message, 'info');
+    }
+    
+    function createNotification(message, type) {
+        // Remove any existing notifications
+        const existingNotification = document.querySelector('.notification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
+        
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.innerHTML = `
+            <span>${message}</span>
+            <button onclick="this.parentElement.remove()">&times;</button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+    
     // Event listeners for configuration changes
     configInputs.forEach(input => {
         input.addEventListener('change', function() {
@@ -293,7 +358,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Event listener for drone type toggle
     droneTypeToggle.addEventListener('change', toggleDroneType);
     
-    // Initial setup and update - REVISED for better chart loading
+    // Enhanced initialization with better error handling
     try {
         // Initialize sliders
         initSliders();
@@ -304,18 +369,32 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initial update of metrics
         updateResults();
         
+        // Try to load APC data if available
+        calculator.loadAPCData().then(() => {
+            console.log('APC propeller data integration ready');
+            showUserInfo('Enhanced propeller calculations available');
+        }).catch(() => {
+            console.log('APC data not available - using simplified calculations');
+        });
+        
         // Initialize charts with data after a delay to ensure DOM is ready
         setTimeout(() => {
-            initializeChartsWithData();
-            
-            // Add a second forced redraw to handle edge cases
-            setTimeout(forceChartRedraw, 1000);
+            try {
+                initializeChartsWithData();
+                
+                // Add a second forced redraw to handle edge cases
+                setTimeout(forceChartRedraw, 1000);
+            } catch (chartError) {
+                console.error('Chart initialization failed:', chartError);
+                showUserWarning('Some charts may not display correctly');
+            }
         }, 300);
         
-        // Log message to inform about advanced metrics
-        console.info('Note: Some advanced metrics elements are not in the DOM. Add the HTML elements to display these values.');
+        showUserInfo('Drone configuration tool loaded successfully');
+        
     } catch (error) {
         console.error('Error during initialization:', error);
+        showUserError('Application initialization failed. Some features may not work correctly.');
     }
     
     // Improved tab button handling for charts

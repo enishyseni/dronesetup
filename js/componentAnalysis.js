@@ -1,8 +1,15 @@
 class ComponentAnalyzer {
     constructor(calculator) {
         this.calculator = calculator;
-        // Initialize droneType directly from calculator if available
         this.droneType = calculator ? calculator.droneType : 'fpv';
+        
+        // Enhanced thermal modeling constants
+        this.thermalConstants = {
+            motorThermalResistance: 8, // °C/W
+            escThermalResistance: 12,  // °C/W
+            ambientTemperature: 25,    // °C
+            criticalTemperature: 85    // °C
+        };
     }
 
     // Add a method to update the drone type if calculator changes it
@@ -481,175 +488,333 @@ class ComponentAnalyzer {
     }
     
     /**
-     * Perform a full analysis of the current configuration
+     * Enhanced thermal analysis with multiple components
      */
-    analyzeConfiguration(config) {
-        const components = this.getWeightBreakdown(config);
-        const heaviestComponent = this.getHeaviestComponent(config);
-        const limitingFactor = this.getLimitingFactor(config);
-        const suggestedImprovement = this.getSuggestedImprovement(config);
+    getThermalAnalysis(config) {
+        const kvRating = parseInt(config.motorKv);
+        const batteryType = config.batteryType.split('-')[0];
+        const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
+        const frameSize = config.frameSize;
         
-        // Get performance data for various charts
-        const thermalData = this.getThermalEfficiencyData(config);
-        const noiseData = this.getNoiseData(config);
-        const propEfficiencyData = this.getPropEfficiencyData(config);
-        const thrustCurveData = this.getThrustCurveData(config);
+        // Motor thermal analysis
+        const motorAnalysis = this.getMotorThermalAnalysis(kvRating, batteryType, cellCount);
+        
+        // ESC thermal analysis
+        const escAnalysis = this.getESCThermalAnalysis(config);
+        
+        // Battery thermal analysis
+        const batteryAnalysis = this.getBatteryThermalAnalysis(config);
+        
+        // VTX thermal analysis
+        const vtxAnalysis = this.getVTXThermalAnalysis(config);
         
         return {
-            components,
-            heaviestComponent,
-            limitingFactor,
-            suggestedImprovement,
-            thermalData,
-            noiseData,
-            propEfficiencyData,
-            thrustCurveData
+            motor: motorAnalysis,
+            esc: escAnalysis,
+            battery: batteryAnalysis,
+            vtx: vtxAnalysis,
+            overallRisk: this.calculateOverallThermalRisk([motorAnalysis, escAnalysis, batteryAnalysis, vtxAnalysis])
         };
     }
 
-    /**
-     * Calculate power system optimization parameters
-     */
-    getPowerSystemOptimization(config) {
-        const totalWeight = this.calculator.calculateFPVDroneWeight(config);
-        const thrust = this.calculator.calculateThrust(config);
-        const hoverThrust = totalWeight * 9.81 / 4; // Divide by 4 motors, convert g to N
+    getMotorThermalAnalysis(kvRating, batteryType, cellCount) {
+        const baseTemp = this.thermalConstants.ambientTemperature;
         
-        // Optimal power calculations from README
-        const optimalPowerMin = hoverThrust * 2.5;
-        const optimalPowerMax = hoverThrust * 3.5;
+        // Higher KV motors generate more heat
+        const kvHeatFactor = (kvRating - 1500) / 1500 * 0.4;
         
-        // Motor thermal modeling
-        const thermalResistance = 8; // °C/W - typical for mini quad motors
-        const motorEfficiency = this.calculator.calculateMotorEfficiency(config);
-        const inputPower = thrust / 10; // Simplified power calculation in watts
-        const powerLoss = inputPower * (1 - motorEfficiency/100);
-        const tempRise = powerLoss * thermalResistance;
+        // Battery type affects heat generation
+        const batteryHeatFactor = batteryType === 'lipo' ? 1.0 : 0.8;
         
-        return {
-            optimalPowerMin,
-            optimalPowerMax,
-            currentPower: thrust / 10, // Simplified
-            efficiency: motorEfficiency,
-            thermalRise: tempRise
-        };
-    }
-    
-    /**
-     * Calculate frame geometry effects
-     */
-    getFrameGeometryEffects(config) {
-        const frameSize = config.frameSize;
+        // Cell count affects voltage and thus heat
+        const voltageHeatFactor = (cellCount - 3) * 0.15;
         
-        // Arm lengths based on frame size in mm
-        const armLengths = {
-            '3inch': 65,
-            '5inch': 110,
-            '7inch': 160,
-            '10inch': 225
-        };
-        
-        // Approximate stiffness (k) values
-        const armStiffness = {
-            '3inch': 75,
-            '5inch': 60,
-            '7inch': 45,
-            '10inch': 30
-        };
-        
-        // Calculate natural frequency: f = (1/2π) × √(k/m)
-        const armLength = armLengths[frameSize];
-        const stiffness = armStiffness[frameSize];
-        const motorWeight = this.getComponentWeight('motor', config);
-        const naturalFrequency = (1/(2 * Math.PI)) * Math.sqrt(stiffness/motorWeight) * 10;
-        
-        // X vs H configuration yaw authority calculation
-        const xConfigYawAuthority = 1.0;
-        const hConfigYawAuthority = 0.85; // 15% less yaw authority
+        const throttleLevels = [0, 25, 50, 75, 100];
+        const temperatures = throttleLevels.map(throttle => {
+            const loadFactor = Math.pow(throttle / 100, 1.8);
+            const heatGeneration = 15 * loadFactor * (1 + kvHeatFactor) * batteryHeatFactor * (1 + voltageHeatFactor);
+            return baseTemp + heatGeneration;
+        });
         
         return {
-            armLength,
-            naturalFrequency,
-            propwashResistance: naturalFrequency > 120 ? 'Good' : 'Moderate',
-            xConfigYawBoost: `${Math.round((xConfigYawAuthority/hConfigYawAuthority - 1) * 100)}%`,
-            cgToleranceLongitudinal: '±3mm',
-            cgToleranceLateral: '±2mm'
+            temperatures,
+            maxTemp: Math.max(...temperatures),
+            riskLevel: this.getThermalRiskLevel(Math.max(...temperatures)),
+            recommendations: this.getMotorCoolingRecommendations(Math.max(...temperatures), kvRating)
         };
     }
-    
-    /**
-     * Get component weight by type
-     */
-    getComponentWeight(type, config) {
-        const components = this.getWeightBreakdown(config);
+
+    getESCThermalAnalysis(config) {
+        const current = this.calculator.calculateHoverCurrent(config, this.getTotalWeight(config));
+        const maxCurrent = current * 2.5; // Estimate max current as 2.5x hover
         
-        switch(type) {
-            case 'motor':
-                return this.calculator.droneType === 'fpv' ? 
-                    components.motors / 4 : // Divide by 4 for single motor weight
-                    components.motor;
-            default:
-                return components[type] || 0;
+        const baseTemp = this.thermalConstants.ambientTemperature;
+        const powerLoss = maxCurrent * maxCurrent * 0.005; // Simplified resistance calculation
+        const tempRise = powerLoss * this.thermalConstants.escThermalResistance;
+        
+        return {
+            maxTemp: baseTemp + tempRise,
+            powerLoss: powerLoss,
+            riskLevel: this.getThermalRiskLevel(baseTemp + tempRise),
+            recommendations: this.getESCCoolingRecommendations(baseTemp + tempRise)
+        };
+    }
+
+    getBatteryThermalAnalysis(config) {
+        const batteryType = config.batteryType.split('-')[0];
+        const capacity = parseInt(config.batteryCapacity);
+        const dischargeRate = this.calculator.calculateBatteryDischargeRate(config, this.getTotalWeight(config));
+        const cRating = parseInt(dischargeRate.split('C')[0]);
+        
+        // Li-ion runs cooler than LiPo but has lower C-ratings
+        const baseTempRise = batteryType === 'lipo' ? 
+            cRating * 0.3 : // LiPo: 0.3°C per C
+            cRating * 0.5;  // Li-ion: 0.5°C per C (higher because it's stressed more)
+        
+        const capacityFactor = Math.sqrt(capacity / 1500); // Larger batteries dissipate heat better
+        const actualTempRise = baseTempRise / capacityFactor;
+        
+        return {
+            maxTemp: this.thermalConstants.ambientTemperature + actualTempRise,
+            cRating: cRating,
+            riskLevel: this.getThermalRiskLevel(this.thermalConstants.ambientTemperature + actualTempRise),
+            recommendations: this.getBatteryCoolingRecommendations(cRating, batteryType)
+        };
+    }
+
+    getVTXThermalAnalysis(config) {
+        const vtxPower = parseInt(config.vtxPower);
+        const efficiency = 0.85; // Typical VTX efficiency
+        const powerLoss = vtxPower * (1 - efficiency) / 1000; // Convert mW to W
+        
+        const tempRise = powerLoss * 25; // VTX thermal resistance ~25°C/W
+        
+        return {
+            maxTemp: this.thermalConstants.ambientTemperature + tempRise,
+            powerLoss: powerLoss,
+            riskLevel: this.getThermalRiskLevel(this.thermalConstants.ambientTemperature + tempRise),
+            recommendations: this.getVTXCoolingRecommendations(vtxPower)
+        };
+    }
+
+    getThermalRiskLevel(temperature) {
+        if (temperature > this.thermalConstants.criticalTemperature) return 'Critical';
+        if (temperature > 70) return 'High';
+        if (temperature > 55) return 'Medium';
+        return 'Low';
+    }
+
+    getMotorCoolingRecommendations(maxTemp, kvRating) {
+        const recommendations = [];
+        
+        if (maxTemp > 80) {
+            recommendations.push('Consider lower KV motors or larger propellers');
+            recommendations.push('Add motor heat sinks or cooling fans');
+        }
+        if (maxTemp > 70) {
+            recommendations.push('Ensure adequate airflow around motors');
+            if (kvRating > 2700) {
+                recommendations.push('Consider reducing motor KV for better efficiency');
+            }
+        }
+        if (maxTemp > 60) {
+            recommendations.push('Monitor motor temperatures during long flights');
+        }
+        
+        return recommendations.length > 0 ? recommendations : ['Thermal management adequate'];
+    }
+
+    getESCCoolingRecommendations(maxTemp) {
+        const recommendations = [];
+        
+        if (maxTemp > 85) {
+            recommendations.push('Add ESC heat sinks immediately');
+            recommendations.push('Consider higher-rated ESCs');
+        }
+        if (maxTemp > 70) {
+            recommendations.push('Ensure ESCs have adequate airflow');
+            recommendations.push('Consider ESCs with better thermal design');
+        }
+        
+        return recommendations.length > 0 ? recommendations : ['ESC thermal management adequate'];
+    }
+
+    getBatteryCoolingRecommendations(cRating, batteryType) {
+        const recommendations = [];
+        
+        const maxSafeCRating = batteryType === 'lipo' ? 50 : 10;
+        
+        if (cRating > maxSafeCRating) {
+            recommendations.push(`C-rating too high for ${batteryType.toUpperCase()}`);
+            if (batteryType === 'liion') {
+                recommendations.push('Consider switching to LiPo for high discharge applications');
+            }
+            recommendations.push('Increase battery capacity to reduce C-rating requirement');
+        }
+        if (cRating > maxSafeCRating * 0.8) {
+            recommendations.push('Monitor battery temperature during flight');
+            recommendations.push('Allow cooling time between flights');
+        }
+        
+        return recommendations.length > 0 ? recommendations : ['Battery thermal management adequate'];
+    }
+
+    getVTXCoolingRecommendations(vtxPower) {
+        const recommendations = [];
+        
+        if (vtxPower >= 1000) {
+            recommendations.push('Mandatory heat sink for 1W+ VTX');
+            recommendations.push('Ensure VTX has good airflow');
+        }
+        if (vtxPower >= 600) {
+            recommendations.push('Consider heat sink for improved reliability');
+        }
+        
+        return recommendations.length > 0 ? recommendations : ['VTX thermal management adequate'];
+    }
+
+    calculateOverallThermalRisk(analyses) {
+        const riskLevels = { 'Low': 1, 'Medium': 2, 'High': 3, 'Critical': 4 };
+        const maxRisk = Math.max(...analyses.map(a => riskLevels[a.riskLevel]));
+        
+        return Object.keys(riskLevels).find(key => riskLevels[key] === maxRisk);
+    }
+
+    /**
+     * Perform a full analysis of the current configuration
+     */
+    analyzeConfiguration(config) {
+        try {
+            const components = this.getWeightBreakdown(config);
+            const heaviestComponent = this.getHeaviestComponent(config);
+            const limitingFactor = this.getLimitingFactor(config);
+            const suggestedImprovement = this.getSuggestedImprovement(config);
+            
+            // Enhanced analyses
+            const thermalAnalysis = this.getThermalAnalysis(config);
+            const thermalData = this.getThermalEfficiencyData(config);
+            const noiseData = this.getNoiseData(config);
+            const propEfficiencyData = this.getPropEfficiencyData(config);
+            const thrustCurveData = this.getThrustCurveData(config);
+            
+            return {
+                components,
+                heaviestComponent,
+                limitingFactor,
+                suggestedImprovement,
+                thermalAnalysis,
+                thermalData,
+                noiseData,
+                propEfficiencyData,
+                thrustCurveData,
+                overallScore: this.calculateOverallScore(config),
+                optimizationSuggestions: this.getOptimizationSuggestions(config)
+            };
+        } catch (error) {
+            console.error('Error analyzing configuration:', error);
+            return {
+                components: {},
+                heaviestComponent: 'Analysis Error',
+                limitingFactor: 'Analysis Error',
+                suggestedImprovement: 'Please check configuration',
+                thermalAnalysis: null,
+                thermalData: [],
+                noiseData: [],
+                propEfficiencyData: [],
+                thrustCurveData: [],
+                overallScore: 0,
+                optimizationSuggestions: ['Configuration analysis failed']
+            };
         }
     }
-    
+
     /**
-     * Analyze radio system performance
+     * Calculate overall configuration score (0-100)
      */
-    getRadioSystemAnalysis(protocol, txPower) {
-        const protocols = {
-            'crsf': {
-                latency: '4-6ms',
-                refreshRate: '150/250/500Hz',
-                resilience: 'Very High (FHSS)'
-            },
-            'elrs': {
-                latency: '2-5ms', 
-                refreshRate: '250/500/1000Hz',
-                resilience: 'Extremely High (FHSS+TDMA)'
-            },
-            'frsky_d8': {
-                latency: '18-22ms',
-                refreshRate: '50Hz',
-                resilience: 'Moderate (FHSS)'
-            },
-            'frsky_d16': {
-                latency: '12-15ms',
-                refreshRate: '100Hz',
-                resilience: 'High (FHSS)'
-            },
-            'spektrum': {
-                latency: '12-14ms',
-                refreshRate: '91Hz',
-                resilience: 'Moderate'
+    calculateOverallScore(config) {
+        try {
+            const weight = this.getTotalWeight(config);
+            const limitingFactor = this.getLimitingFactor(config);
+            const thermalAnalysis = this.getThermalAnalysis(config);
+            
+            let score = 70; // Base score
+            
+            // Weight optimization (±15 points)
+            const idealWeight = this.droneType === 'fpv' ? 550 : 800;
+            const weightDiff = Math.abs(weight - idealWeight) / idealWeight;
+            score += (1 - Math.min(weightDiff, 0.5)) * 15;
+            
+            // Limiting factor penalty (-10 to 0 points)
+            if (limitingFactor !== 'Well balanced setup') {
+                score -= 10;
             }
-        };
-        
-        // Link budget calculation (simplified)
-        const txPowerDbm = 10 * Math.log10(txPower) + 30; // Convert mW to dBm
-        const frequency = protocol === 'elrs' ? 2.4 : 0.9; // GHz - 2.4GHz or 900MHz
-        const txGain = 2.15; // dBi
-        const rxGain = 2.15; // dBi
-        
-        // Free space path loss calculation at 1km
-        const distance = 1; // km
-        const fspl = 20 * Math.log10(distance) + 20 * Math.log10(frequency * 1000) - 27.55;
-        
-        // Range estimation
-        const rxSensitivity = -90; // dBm typical
-        const linkBudget = txPowerDbm + txGain + rxGain - fspl;
-        const margin = linkBudget - rxSensitivity;
-        
-        // Effective range (km) = 10^((margin)/20) assuming free space
-        const effectiveRange = Math.pow(10, margin/20);
-        
-        return {
-            ...protocols[protocol] || protocols['frsky_d16'],
-            linkBudget: `${linkBudget.toFixed(1)} dBm`,
-            theoreticalRange: `${effectiveRange.toFixed(1)} km`
-        };
+            
+            // Thermal management (±15 points)
+            const overallRisk = thermalAnalysis.overallRisk;
+            const thermalScores = { 'Low': 15, 'Medium': 5, 'High': -5, 'Critical': -15 };
+            score += thermalScores[overallRisk] || 0;
+            
+            return Math.max(0, Math.min(100, Math.round(score)));
+        } catch (error) {
+            console.error('Error calculating overall score:', error);
+            return 50; // Default score on error
+        }
     }
-    
+
+    /**
+     * Get specific optimization suggestions
+     */
+    getOptimizationSuggestions(config) {
+        const suggestions = [];
+        
+        try {
+            const weight = this.getTotalWeight(config);
+            const thermalAnalysis = this.getThermalAnalysis(config);
+            
+            // Weight-based suggestions
+            if (this.droneType === 'fpv' && weight > 700) {
+                suggestions.push('Consider lighter frame or smaller battery for better agility');
+            }
+            if (this.droneType === 'fpv' && weight < 400) {
+                suggestions.push('Could handle larger battery for longer flight time');
+            }
+            
+            // Thermal-based suggestions
+            if (thermalAnalysis.overallRisk === 'High' || thermalAnalysis.overallRisk === 'Critical') {
+                suggestions.push('Thermal management needs attention - see individual component recommendations');
+            }
+            
+            // Performance optimization
+            const kvRating = parseInt(config.motorKv);
+            const frameSize = parseInt(config.frameSize?.replace('inch', '') || '5');
+            
+            if (kvRating > 2700 && frameSize >= 7) {
+                suggestions.push('Lower KV motors recommended for larger props - better efficiency');
+            }
+            if (kvRating < 2000 && frameSize <= 5) {
+                suggestions.push('Higher KV motors recommended for smaller props - better performance');
+            }
+            
+            // Battery optimization
+            const batteryType = config.batteryType;
+            const capacity = parseInt(config.batteryCapacity);
+            
+            if (batteryType.includes('liion') && capacity < 2200) {
+                suggestions.push('Li-ion benefits more apparent with higher capacities');
+            }
+            
+            if (suggestions.length === 0) {
+                suggestions.push('Configuration appears well optimized');
+            }
+            
+        } catch (error) {
+            console.error('Error generating optimization suggestions:', error);
+            suggestions.push('Unable to generate optimization suggestions');
+        }
+        
+        return suggestions;
+    }
+
     /**
      * Get battery voltage based on configuration
      */

@@ -1,159 +1,443 @@
 # DroneSetup
 
-A comprehensive tool for configuring and analyzing FPV and fixed-wing drones.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/enishyseni/dronesetup)
+[![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-yellow.svg)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 
-![DroneSetup FPV Optimizer Screenshot](fpvoptimizer.jpg)
+## New Features in v1.1.0
+
+### Enhanced Thermal Management
+
+- **Comprehensive thermal analysis** for motors, ESCs, batteries, and VTX
+- **Component-specific cooling recommendations**
+- **Real-time thermal risk assessment** with visual indicators
+- **Temperature predictions** across different throttle levels
+
+### Advanced Component Analysis
+
+- **Overall configuration scoring** (0-100 scale)
+- **Intelligent optimization suggestions** based on component compatibility
+- **Enhanced weight distribution analysis** with detailed breakdowns
+- **Performance bottleneck identification** with specific recommendations
+
+### APC Propeller Integration Ready
+
+- **Framework for APC propeller database integration** (see APC-readme.md)
+- **Enhanced thrust calculations** when propeller data is available
+- **Propeller specification mapping** for accurate performance modeling
+- **Future support for real-world propeller performance data**
+
+### Improved User Experience
+
+- **Real-time error handling** with user-friendly notifications
+- **Configuration validation** to prevent invalid setups
+- **Enhanced mobile responsiveness** for better tablet/phone usage
+- **Loading states** and progress indicators
+
+### Better Calculations
+
+- **Improved decimal precision** across all calculations
+- **Enhanced battery chemistry modeling** (LiPo vs Li-Ion differences)
+- **More accurate current draw estimations**
+- **Realistic thermal modeling** based on component specifications
+
+## Technical Improvements
+
+### Error Handling
+
+```javascript
+// Robust configuration validation
+if (!calculator.validateConfig(config)) {
+  showUserWarning("Invalid configuration detected");
+  return;
+}
+
+// Graceful error recovery
+try {
+  const metrics = calculator.calculateAllMetrics(config);
+} catch (error) {
+  console.error("Calculation error:", error);
+  showUserError("Please check your configuration");
+}
+```
+
+### Thermal Analysis
+
+```javascript
+// Advanced thermal modeling
+const thermalAnalysis = analyzer.getThermalAnalysis(config);
+// Returns: motor, ESC, battery, VTX temperatures and recommendations
+```
+
+### APC Integration Framework
+
+```javascript
+// Future APC propeller data integration
+await calculator.loadAPCData("./data/apc_props.json");
+const thrust = calculator.calculateThrustFromAPC(rpm, propId, airspeed);
+```
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Core Features](#core-features)
+- [Technology Stack](#technology-stack)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Technical Analysis](#technical-analysis)
+- [Use Cases](#use-cases)
+- [Contributing](#contributing)
+- [Roadmap](#roadmap)
+- [License](#license)
 
 ## Overview
 
-DroneSetup helps drone enthusiasts and builders optimize their setups by providing real-time feedback on various performance parameters. It allows you to configure both FPV (First Person View) quadcopters and fixed-wing aircraft, offering detailed insights into flight performance based on component selection.
+DroneSetup is an advanced drone configuration platform that combines engineering principles with user-friendly interfaces to provide detailed performance analysis. Whether you're building your first FPV racing quad or designing a long-range fixed-wing aircraft, this tool helps you understand how component choices affect flight characteristics, efficiency, and overall performance.
 
-## Features
+**Key Benefits:**
 
-- Interactive component selection with real-time performance calculations
-- Support for both FPV quadcopters and fixed-wing aircraft
-- Comprehensive weight, power, and flight time estimations
-- Component analysis to identify limiting factors and suggest improvements
-- In-depth technical calculations based on physics and engineering principles
-- Comparison tools to understand how component changes affect performance
+- 🚀 Real-time performance calculations
+- 📊 Physics-based analysis engine
+- 🎯 Component optimization recommendations
+- 📱 Cross-platform compatibility
+- 🔬 Educational insights into drone engineering
 
-## Technical Analysis: FPV Drone Components & Performance
+## Core Features
 
-### Component Impact on Flight Parameters
+### 🚁 **Dual Aircraft Support**
 
-#### Propulsion System
+- **FPV Quadcopters**: 3-inch to 10-inch frame configurations with racing, freestyle, and cinematic setups
+- **Fixed-Wing Aircraft**: Conventional, flying wing, and delta configurations from 800mm to 2000mm wingspan
+- Real-time switching between aircraft types with context-appropriate calculations
 
-- **Motors**: KV rating directly affects RPM per volt. Higher KV = more speed, lower KV = more torque
-  - Formula: Max RPM = KV rating × Battery voltage
-  - Example: 2400KV motor with 4S (16.8V) battery = 40,320 RPM
-- **Propellers**: Size and pitch affect thrust, efficiency, and response time
-  - Larger props = more thrust but slower response
-  - Higher pitch = more speed but less efficiency
-  - Thrust calculation: T = Ct × ρ × n² × D⁴ (where Ct is thrust coefficient, ρ is air density, n is rotational speed, D is prop diameter)
+### 📊 **Advanced Performance Analytics**
 
-##### Motor and Propeller Matching
+- **Flight Performance Metrics**: Flight time, maximum speed, range calculations, and power-to-weight ratios
+- **Component Impact Analysis**: Real-time feedback on how each component affects overall performance
+- **Comparative Analysis**: Side-by-side comparisons of different configurations and component choices
+- **Optimization Recommendations**: AI-driven suggestions for improving performance bottlenecks
 
-- **Motor Size to Frame**: Motor stator dimensions (XXYY format) impact performance:
-  - 1806/2204: Suitable for 3" builds (efficiency-focused)
-  - 2306/2307: Optimal for 5" freestyle (balanced power/efficiency)
-  - 2407/2508: High-power 5" racing and freestyle builds
-  - 2810/3007: Heavy-lift capability for 7"+ builds
-- **Prop-to-Motor Harmony**:
-  - Optimal loading: 2.5-3.5g of thrust per watt of power
-  - Efficiency curve calculation: η = (Thrust² ÷ Power) × k (where k is prop constant)
-  - Optimal RPM range = 2300 × prop diameter in inches
+### 🔧 **Comprehensive Component Database**
 
-#### Flight Controller & Software
+- **Battery Chemistry Support**: LiPo vs Li-Ion analysis with accurate capacity, weight, and discharge characteristics
+- **Motor Analysis**: KV rating impacts on RPM, efficiency, and thermal characteristics
+- **Frame Geometry**: Size-specific calculations for weight, stiffness, and aerodynamic properties
+- **Power Systems**: VTX power analysis with range calculations and regulatory compliance
 
-- **Flight Controller Processing Power**:
-  - F4 processor: ~8kHz gyro loop processing
-  - F7 processor: ~12kHz gyro loop processing, higher precision math
-- **PID Controllers**:
-  - P-term (Proportional): Immediate correction response, higher values = faster response
-  - I-term (Integral): Error accumulation correction, higher values = less drift
-  - D-term (Derivative): Dampens oscillations, higher values = more stability but more noise
-- **Filters**:
-  - Low-pass filtering reduces noise but adds latency
-  - Notch filters target specific frequency ranges
-  - Dynamic filters adapt to motor/prop resonance frequencies
+### 📈 **Interactive Visualization Suite**
 
-##### Advanced Flight Controller Configuration
+#### Performance Charts
 
-- **CPU Performance Impact**:
-  - F4 vs F7 processors: Loop time reduction from 8kHz to 12kHz
-  - Blackbox logging overhead: 2-5% CPU usage at 2K logging rate
-- **Filtering Strategies**:
-  - Dynamic notch width calculation: BW = base_width × √(loop_time ÷ 8000)
-  - Bi-quad filter attenuation = -20log₁₀(Q × f₀/f)dB for f >> f₀
-  - Anti-gravity effectiveness = I_term_boost × throttle_change_rate
-- **Betaflight/KISS/Emuflight Differences**:
-  - Feed-forward implementation: Raw setpoint derivative vs Actual FF calculation
-  - Angle/horizon mode mixing ratio = cos(lean_angle × π/180) for smoothed transitions
-  - Rate limiting: Effective limit = RC_Rate × Super_Rate × (1-Rate_Expo×stick_position²)
+- **Speed Analysis**: Maximum speed comparisons across different configurations
+- **Flight Time Optimization**: Battery capacity and chemistry impact on endurance
+- **Range Calculations**: Line-of-sight range based on VTX power and antenna systems
+- **Efficiency Curves**: Current draw analysis for optimal battery utilization
 
-### Advanced Calculations
+#### Weight Distribution Analysis
 
-#### Thrust-to-Weight Mapping
+- **Component Breakdown**: Pie charts showing weight distribution across all components
+- **Payload Capacity**: Available weight for cameras, action cams, or additional equipment
+- **Center of Gravity**: Balance point calculations for optimal flight characteristics
+- **Weight Comparison**: Side-by-side weight analysis for different configurations
 
-| TWR Value | Flight Characteristic            |
-| --------- | -------------------------------- |
-| <2:1      | Unable to hover efficiently      |
-| 2:1 - 3:1 | Stable hover, minimal acro       |
-| 3:1 - 5:1 | Good acro, medium agility        |
-| 5:1 - 8:1 | Racing performance, high agility |
-| >8:1      | Extremely aggressive maneuvers   |
+#### Power System Analytics
 
-#### Efficiency Calculations
+- **Current Draw Profiles**: Hover, cruise, and maximum current consumption
+- **Battery Discharge Analysis**: C-rating requirements and safety margins
+- **Thermal Modeling**: Motor temperature predictions under various load conditions
+- **Power Efficiency**: Optimal throttle ranges for maximum efficiency
 
-- **Current Draw Estimation**: I = (Thrust × 3.5) ÷ Voltage
-- **Motor Efficiency**: η = (Mechanical power out ÷ Electrical power in) × 100%
-- **Optimal prop loading**: 2.5-3.5g/cm² for 5" freestyle builds
+#### Advanced Technical Analysis
 
-### Signal Systems & Radio Frequency Analysis
+- **Thrust Curves**: Non-linear thrust response across throttle ranges
+- **Motor Efficiency Maps**: KV-specific efficiency profiles at different throttle positions
+- **Noise Level Predictions**: dB calculations for various prop and motor combinations
+- **Propeller Efficiency**: Optimal RPM ranges and efficiency curves
 
-#### Radio Control Links
+### 🎛️ **Interactive Configuration Interface**
 
-- **Protocol Latency Comparison**:
-  - ExpressLRS: 2-5ms at 500Hz refresh rate
-  - CRSF: 4-6ms at 150Hz refresh rate
-  - FrSky D16: 12-15ms at 100Hz refresh rate
-- **Link Budget Calculation**:
-  - Receiver sensitivity = -90dBm (typical)
-  - Free space path loss = 20log₁₀(d) + 20log₁₀(f) - 27.55
-  - Maximum range = 10^((TX_power + TX_gain + RX_gain - losses - RX_sensitivity) ÷ 20)
+- **Real-time Sliders**: Instant visual feedback as you adjust component parameters
+- **Smart Defaults**: Industry-standard starting configurations for different use cases
+- **Configuration Validation**: Warnings for incompatible or suboptimal component combinations
+- **Save/Load Profiles**: Store and recall favorite configurations
 
-#### Video Transmission
+### 🧮 **Physics-Based Calculations**
 
-- **Analog vs Digital Comparisons**:
-  - Analog: Lower latency (20-40ms), lower clarity, susceptible to interference
-  - Digital: Higher latency (30-100ms), higher clarity, better noise rejection
-- **Range vs Resolution Trade-off**:
-  - Range extension: 1.4× improvement per each 3dB gain in Effective Radiated Power
-  - 5.8GHz band attenuation: -0.4dB/100m in clear air
+#### Propulsion System Analysis
 
-### Applied Configuration Calculator Formulas
+- **Motor Performance**: RPM calculations using KV × Voltage formula
+- **Thrust Calculations**: Using aerodynamic principles (T = Ct × ρ × n² × D⁴)
+- **Efficiency Modeling**: Mechanical vs electrical power analysis
+- **Optimal RPM Ranges**: Propeller-specific efficiency calculations (2300 × diameter rule)
 
-Our DroneSetup tools implement these calculations through interactive configurators that provide:
+#### Flight Dynamics
 
-1. **Power System Optimizer**:
+- **Thrust-to-Weight Ratios**: Performance classification (acrobatic >2:1, cruising 1.2-2:1)
+- **Wing Loading**: Fixed-wing specific calculations for different wing types
+- **Control Surface Authority**: Elevator, aileron, and rudder effectiveness analysis
+- **Center of Gravity**: Longitudinal and lateral balance calculations
 
-   - Motor efficiency mapping based on KV, voltage, prop size
-   - Calculates optimal power band: P_opt = (T_hover × 2.5) to (T_hover × 3.5)
-   - Thermal modeling: T_rise = P_loss × R_thermal (°C)
+#### Battery System Analysis
 
-2. **Flight Dynamics Predictor**:
+- **Energy Density Comparisons**: LiPo vs Li-Ion performance characteristics
+- **Discharge Rate Calculations**: C-rating requirements for different flight profiles
+- **Voltage Sag Modeling**: Performance degradation under load
+- **Cycle Life Predictions**: Long-term battery performance expectations
 
-   - Rates calculator: Max rotation rate = deg/sec = (RC_Rate × Super_Rate × 200)
-   - Flip/roll time estimation: t = (2π × I) ÷ (T_motor × r_arm)
-   - Propwash prediction based on frame geometry and PID values
+### 🔍 **Component Optimization Engine**
 
-3. **Build Compatibility Matrix**:
-   - Component database cross-references for electrical compatibility
-   - Mechanical fit verification based on mounting patterns
-   - Weight balancing with CG calculations
+- **Bottleneck Identification**: Automatic detection of performance-limiting components
+- **Improvement Suggestions**: Specific recommendations for upgrades or changes
+- **Cost-Benefit Analysis**: Performance gains vs component cost considerations
+- **Compatibility Checking**: Ensures all components work together optimally
 
-These tools perform real-time calculations as you select components, providing immediate feedback on how each change affects your drone's theoretical performance before building.
+### 📱 **Modern Web Interface**
 
-DroneSetup's configuration tools automatically calculate these parameters based on your component selection, helping you build a balanced, efficient FPV drone tailored to your flying style.
+- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile devices
+- **Dark Theme**: Easy on the eyes for extended configuration sessions
+- **Accessibility**: Screen reader compatible with keyboard navigation support
+- **Progressive Web App**: Install as a desktop application for offline use
+
+## Technology Stack
+
+### Frontend
+
+- **HTML5**: Semantic markup with modern web standards
+- **CSS3**: Responsive design with Flexbox/Grid layouts
+- **JavaScript (ES6+)**: Modern JavaScript with modules and async/await
+- **Chart.js**: Interactive data visualization and charting library
+
+### Core Libraries
+
+- **Chart.js v3.x**: Advanced charting and data visualization
+- **Web APIs**: Local Storage for configuration persistence
+- **Service Workers**: Offline functionality and caching
+
+### Browser Support
+
+- **Modern Browsers**: Chrome 80+, Firefox 75+, Safari 13+, Edge 80+
+- **Mobile**: iOS Safari 13+, Chrome Mobile 80+
+- **Features Required**: ES6 modules, Canvas API, Local Storage
 
 ## Installation
 
-1. Clone the repository
-2. Open index.html in your browser
-3. Start configuring your drone!
+### Prerequisites
+
+- Modern web browser with JavaScript enabled
+- Internet connection (for initial load)
+- Minimum 4GB RAM recommended for optimal performance
+
+### Quick Start
+
+1. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/enishyseni/dronesetup.git
+   cd dronesetup
+   ```
+
+2. **Local Development Server (Recommended)**
+
+   ```bash
+   # Using Python 3
+   python -m http.server 8000
+
+   # Using Node.js (if you have live-server installed)
+   npx live-server
+
+   # Using PHP
+   php -S localhost:8000
+   ```
+
+3. **Open in browser**
+   - Navigate to `http://localhost:8000`
+   - Or simply open `index.html` directly (some features may be limited)
+
+### Installation Verification
+
+- Check browser console for any errors
+- Verify charts load properly
+- Test component sliders and real-time calculations
+
+### Troubleshooting
+
+**Common Issues:**
+
+- **Charts not loading**: Ensure JavaScript is enabled and browser supports ES6
+- **Slow performance**: Close other browser tabs, check available RAM
+- **Mobile layout issues**: Try portrait orientation, zoom out if needed
+
+## Usage
+
+### Getting Started
+
+1. **Select Aircraft Type**: Choose between quadcopter or fixed-wing configuration
+2. **Configure Components**: Use sliders to adjust motor KV, battery capacity, frame size, etc.
+3. **Analyze Performance**: Review real-time calculations and performance charts
+4. **Optimize Setup**: Follow recommendations to improve specific performance metrics
+5. **Save Configuration**: Store your setup for future reference
+
+### Configuration Tips
+
+- Start with preset configurations for your aircraft type
+- Monitor thrust-to-weight ratios for your intended use case
+- Balance flight time vs performance based on your priorities
+- Check component compatibility warnings
+
+## Technical Analysis
+
+### Component Impact on Flight Parameters
+
+#### Motor & Propulsion System
+
+- **KV Rating Impact**: Higher KV = more speed, lower KV = more torque
+
+  ```
+  Max RPM = KV rating × Battery voltage
+  Example: 2400KV motor with 4S (16.8V) = 40,320 RPM
+  ```
+
+- **Propeller Calculations**: Thrust formula implementation
+  ```
+  T = Ct × ρ × n² × D⁴
+  Where: Ct = thrust coefficient, ρ = air density, n = RPM, D = diameter
+  ```
+
+#### Battery System Analysis
+
+- **LiPo vs Li-Ion Characteristics**:
+
+  - **LiPo**: Higher discharge rates (up to 100C), lighter weight
+  - **Li-Ion**: Higher energy density, longer cycle life
+
+- **Current Draw Estimation**:
+  ```
+  I = (Thrust × 3.5) ÷ Voltage
+  Hover: 40-60% of max current
+  Burst: 80-100% during maneuvers
+  ```
+
+#### Performance Classifications
+
+- **Thrust-to-Weight Ratios**:
+  - Acrobatic/Racing: >2.5:1
+  - Sport/Freestyle: 2.0-2.5:1
+  - Cinematic: 1.5-2.0:1
+  - Long-range: 1.2-1.5:1
+
+### Advanced Calculations
+
+#### Motor Efficiency & Thermal Modeling
+
+```
+Efficiency (η) = (Mechanical Power Out ÷ Electrical Power In) × 100%
+Temperature Rise = Power Loss × Thermal Resistance (°C)
+```
+
+#### Fixed-Wing Specific Analysis
+
+- **Wing Loading**: Weight ÷ Wing Area
+
+  - Low loading (<30 oz/ft²): Better slow-speed handling
+  - High loading (>50 oz/ft²): Higher speeds, wind penetration
+
+- **Center of Gravity**:
+  - Conventional: 25-35% of mean aerodynamic chord
+  - Flying wings: 15-25% (more critical)
+
+## Use Cases
+
+### 🏁 **FPV Racing**
+
+Optimize for maximum speed and agility with minimal weight while maximizing thrust. Power system efficiency for competitive flight times.
+
+### 🎬 **Cinematic/Photography**
+
+Balance payload capacity with flight time. Smooth flight characteristics for stable footage and noise optimization.
+
+### 🛫 **Long-Range/Explorer**
+
+Maximum flight time and range calculations with efficient cruise configurations and battery optimization.
+
+### 🔬 **Educational/Learning**
+
+Understand component interactions, learn engineering principles, and experiment safely before purchases.
+
+### 💼 **Professional Design**
+
+Client consultation tool, performance validation, regulatory compliance, and documentation generation.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+We welcome contributions! Here's how you can help:
+
+### Development Setup
+
+1. **Fork the repository**
+2. **Create a feature branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+3. **Make your changes**
+4. **Test thoroughly** across different browsers
+5. **Submit a pull request**
+
+### Contribution Guidelines
+
+- **Code Style**: Use consistent indentation (2 spaces), meaningful variable names
+- **Documentation**: Update README.md for new features
+- **Testing**: Test on multiple browsers and devices
+- **Performance**: Ensure changes don't impact calculation speed
+
+### Areas for Contribution
+
+- **Component Database**: Add new motors, batteries, frames
+- **Calculations**: Improve accuracy of physics calculations
+- **UI/UX**: Enhance user interface and experience
+- **Features**: Add new analysis tools and visualizations
+- **Documentation**: Improve guides and technical explanations
+
+### Bug Reports
+
+Use GitHub Issues with:
+
+- Clear description of the problem
+- Steps to reproduce
+- Expected vs actual behavior
+- Browser/device information
+- Screenshots if applicable
+
+## Roadmap
+
+### Version 1.1 (Q2 2024)
+
+- [ ] Enhanced mobile responsive design
+- [ ] Configuration export/import functionality
+- [ ] Additional battery chemistry support
+- [ ] Improved motor database
+
+### Version 1.2 (Q3 2024)
+
+- [ ] Multi-language support
+- [ ] Advanced aerodynamic calculations
+- [ ] Weather impact analysis
+- [ ] Component cost tracking
+
+### Version 2.0 (Q4 2024)
+
+- [ ] 3D visualization of aircraft
+- [ ] AI-powered optimization engine
+- [ ] Community configuration sharing
+- [ ] Advanced simulation features
 
 ## License
 
-This project is licensed under the MIT License - see below for details:
+This project is licensed under the MIT License:
 
 ```
 MIT License
 
-Copyright (c) 2023 DroneSetup
+Copyright (c) 2024 DroneSetup
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -176,5 +460,13 @@ SOFTWARE.
 
 ## Acknowledgments
 
-- Thanks to the drone community for sharing knowledge and expertise
-- All contributors who have helped develop and test this tool
+- Thanks to the FPV and drone community for sharing knowledge and expertise
+- Contributors who have helped develop and test this tool
+- Open source libraries that make this project possible
+- Beta testers and early adopters who provided valuable feedback
+
+---
+
+**Made with ❤️ for the drone community**
+
+For questions, suggestions, or support, please [open an issue](https://github.com/enishyseni/dronesetup/issues) or reach out to the community.

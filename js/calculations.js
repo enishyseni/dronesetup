@@ -1,13 +1,44 @@
 class DroneCalculator {
     constructor() {
         this.droneType = 'fpv'; // 'fpv' or 'fixedWing'
+        this.apcPropData = null; // For future APC integration
     }
 
     setDroneType(type) {
         this.droneType = type;
     }
 
+    validateConfig(config) {
+        const requiredFields = ['motorKv', 'batteryType', 'batteryCapacity'];
+        const droneSpecificFields = {
+            fpv: ['frameSize'],
+            fixedWing: ['wingspan', 'wingType']
+        };
+        
+        const allRequired = [...requiredFields, ...droneSpecificFields[this.droneType]];
+        
+        for (const field of allRequired) {
+            if (!config[field]) {
+                console.warn(`Missing required configuration field: ${field}`);
+                return false;
+            }
+        }
+        
+        // Validate numeric values
+        const kvRating = parseInt(config.motorKv);
+        if (isNaN(kvRating) || kvRating < 1000 || kvRating > 4000) {
+            console.warn(`Invalid motor KV rating: ${config.motorKv}`);
+            return false;
+        }
+        
+        return true;
+    }
+
     calculateFPVDroneWeight(config) {
+        if (!this.validateConfig(config)) {
+            return 500; // Default fallback weight
+        }
+        
         // Basic weight calculations for FPV drone components
         const frameWeights = {
             '3inch': 80,
@@ -214,7 +245,9 @@ class DroneCalculator {
         const calculatedTime = (capacityFactor / avgCurrent) * 60 * dischargeSafety * energyDensityFactor;
         
         // Add a minimum realistic flight time
-        return Math.max(Math.round(calculatedTime), 3);
+        // Using safety bounds
+        const boundedTime = Math.max(Math.min(calculatedTime, 60), 2); // Between 2-60 minutes
+        return Math.round(boundedTime);
     }
 
     calculatePayloadCapacity(config, totalWeight) {
@@ -465,66 +498,177 @@ class DroneCalculator {
         return parseFloat(hoverCurrent.toFixed(1));
     }
 
+    /**
+     * Enhanced thrust calculation that could integrate APC propeller data
+     */
+    calculateThrustAdvanced(config) {
+        const motorKv = parseInt(config.motorKv);
+        const batteryType = config.batteryType.split('-')[0];
+        const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
+        const cellVoltage = batteryType === 'lipo' ? 3.7 : 3.6;
+        const voltage = cellCount * cellVoltage;
+        
+        // Calculate motor RPM
+        const rpm = motorKv * voltage;
+        
+        // Get propeller specifications
+        const propSpecs = this.getPropellerSpecs(config);
+        
+        // If APC data is available, use it for more accurate calculations
+        if (this.apcPropData && propSpecs.apcEquivalent) {
+            return this.calculateThrustFromAPC(rpm, propSpecs.apcEquivalent, 0); // 0 airspeed for static thrust
+        }
+        
+        // Fallback to simplified calculation
+        return this.calculateThrust(config);
+    }
+
+    /**
+     * Get propeller specifications based on frame size
+     */
+    getPropellerSpecs(config) {
+        const frameSize = config.frameSize;
+        const propSpecs = {
+            '3inch': {
+                diameter: 3.0, // inches
+                pitch: 3.0,
+                apcEquivalent: '3x3' // Could map to APC prop
+            },
+            '5inch': {
+                diameter: 5.0,
+                pitch: 4.3,
+                apcEquivalent: '5x4.3'
+            },
+            '7inch': {
+                diameter: 7.0,
+                pitch: 4.5,
+                apcEquivalent: '7x4.5'
+            },
+            '10inch': {
+                diameter: 10.0,
+                pitch: 4.7,
+                apcEquivalent: '10x4.7'
+            }
+        };
+        
+        return propSpecs[frameSize] || propSpecs['5inch'];
+    }
+
+    /**
+     * Future method to integrate APC propeller data
+     * This would use the interpolator files mentioned in APC-readme.md
+     */
+    calculateThrustFromAPC(rpm, propId, airspeed) {
+        // Placeholder for APC integration
+        // This would load the interpolator file for the specific prop
+        // and return thrust based on RPM and airspeed
+        
+        if (!this.apcPropData || !this.apcPropData[propId]) {
+            console.warn(`APC data not available for prop: ${propId}`);
+            return null;
+        }
+        
+        // Would implement interpolation here
+        // return this.apcPropData[propId].interpolateThrust(rpm, airspeed);
+        return null;
+    }
+
+    /**
+     * Load APC propeller database
+     */
+    async loadAPCData(dataPath = './data/apc_props.json') {
+        try {
+            const response = await fetch(dataPath);
+            this.apcPropData = await response.json();
+            console.log('APC propeller data loaded successfully');
+        } catch (error) {
+            console.warn('Could not load APC propeller data:', error);
+        }
+    }
+
     getComparisonData(config, metric) {
-        // Generate data for the comparison charts based on different parameters
-        const results = [];
-        const currentValue = config[metric];
-        let options;
-        
-        switch(metric) {
-            case 'batteryType':
-                if (this.droneType === 'fpv') {
-                    options = ['lipo-3s', 'lipo-4s', 'lipo-6s', 'liion-3s', 'liion-4s', 'liion-6s'];
-                } else {
-                    options = ['lipo-3s', 'lipo-4s', 'lipo-6s', 'liion-3s', 'liion-4s', 'liion-6s'];
-                }
-                break;
-            case 'batteryCapacity':
-                options = ['1300', '1500', '2200', '3000', '4000', '5000'];
-                break;
-            case 'motorKv':
-                options = ['1700', '2400', '2700', '3000'];
-                break;
-            case 'frameSize':
-                if (this.droneType === 'fpv') {
-                    options = ['3inch', '5inch', '7inch', '10inch'];
-                } else {
-                    return null; // Not applicable for fixed wing
-                }
-                break;
-            case 'wingspan':
-                if (this.droneType === 'fixedWing') {
-                    options = ['800', '1000', '1500', '2000'];
-                } else {
-                    return null; // Not applicable for FPV
-                }
-                break;
-            default:
-                return null;
+        if (!this.validateConfig(config)) {
+            console.warn('Invalid configuration for comparison');
+            return [];
         }
-        
-        // Generate results for each option
-        for (const option of options) {
-            const tempConfig = {...config};
-            tempConfig[metric] = option;
+
+        try {
+            const currentValue = config[metric];
+            let options;
             
-            const weight = this.droneType === 'fpv' ? 
-                this.calculateFPVDroneWeight(tempConfig) : 
-                this.calculateFixedWingWeight(tempConfig);
-                
-            results.push({
-                option: option,
-                flightTime: this.calculateFlightTime(tempConfig, weight),
-                maxSpeed: this.calculateMaxSpeed(tempConfig),
-                weight: weight,
-                payload: this.calculatePayloadCapacity(tempConfig, weight),
-                range: parseInt(this.calculateRange(tempConfig)),
-                current: parseFloat(parseFloat(this.calculateHoverCurrent(tempConfig, weight)).toFixed(1)), // Ensure 1 decimal precision
-                efficiency: parseFloat((weight / this.calculateFlightTime(tempConfig, weight)).toFixed(1)) // Fix decimal precision
-            });
+            switch(metric) {
+                case 'batteryType':
+                    if (this.droneType === 'fpv') {
+                        options = ['lipo-3s', 'lipo-4s', 'lipo-6s', 'liion-3s', 'liion-4s', 'liion-6s'];
+                    } else {
+                        options = ['lipo-3s', 'lipo-4s', 'lipo-6s', 'liion-3s', 'liion-4s', 'liion-6s'];
+                    }
+                    break;
+                case 'batteryCapacity':
+                    options = ['1300', '1500', '2200', '3000', '4000', '5000'];
+                    break;
+                case 'motorKv':
+                    options = ['1700', '2400', '2700', '3000'];
+                    break;
+                case 'frameSize':
+                    if (this.droneType === 'fpv') {
+                        options = ['3inch', '5inch', '7inch', '10inch'];
+                    } else {
+                        return null; // Not applicable for fixed wing
+                    }
+                    break;
+                case 'wingspan':
+                    if (this.droneType === 'fixedWing') {
+                        options = ['800', '1000', '1500', '2000'];
+                    } else {
+                        return null; // Not applicable for FPV
+                    }
+                    break;
+                default:
+                    return null;
+            }
+            
+            // Generate results for each option with error handling
+            const results = [];
+            for (const option of options) {
+                try {
+                    const tempConfig = {...config};
+                    tempConfig[metric] = option;
+                    
+                    const weight = this.droneType === 'fpv' ? 
+                        this.calculateFPVDroneWeight(tempConfig) : 
+                        this.calculateFixedWingWeight(tempConfig);
+                    
+                    // Validate calculated weight
+                    if (weight < 50 || weight > 5000) {
+                        console.warn(`Unrealistic weight calculated: ${weight}g for ${option}`);
+                        continue;
+                    }
+                    
+                    const flightTime = this.calculateFlightTime(tempConfig, weight);
+                    const hoverCurrent = this.calculateHoverCurrent(tempConfig, weight);
+                    
+                    // Ensure numeric precision
+                    results.push({
+                        option: option,
+                        flightTime: Math.round(flightTime),
+                        maxSpeed: Math.round(this.calculateMaxSpeed(tempConfig)),
+                        weight: Math.round(weight),
+                        payload: Math.round(this.calculatePayloadCapacity(tempConfig, weight)),
+                        range: Math.round(this.calculateRange(tempConfig)),
+                        current: parseFloat(hoverCurrent.toFixed(1)),
+                        efficiency: parseFloat((weight / flightTime).toFixed(1))
+                    });
+                } catch (optionError) {
+                    console.warn(`Error calculating for option ${option}:`, optionError);
+                }
+            }
+            
+            return results;
+        } catch (error) {
+            console.error('Error generating comparison data:', error);
+            return [];
         }
-        
-        return results;
     }
 
     calculateAllMetrics(config) {
@@ -695,8 +839,6 @@ class DroneCalculator {
      * T = Ct × ρ × n² × D⁴ (where Ct is thrust coefficient, ρ is air density, n is rotational speed, D is prop diameter)
      */
     calculateThrust(thrustCoefficient, airDensity, rotationalSpeed, propDiameter) {
-        // Standard air density at sea level is approximately 1.225 kg/m³ if not provided
-        airDensity = airDensity || 1.225;
         return thrustCoefficient * airDensity * Math.pow(rotationalSpeed, 2) * Math.pow(propDiameter, 4);
     }
     
