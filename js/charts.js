@@ -870,15 +870,23 @@ class DroneCharts {
             this.charts.thrustCurveChart.destroy();
         }
         
-        // Get thrust curve data from analyzer
-        const thrustData = this.analyzer.getThrustCurveData(config);
+        // Get thrust curve data - use APC data if available
+        let thrustData;
+        let dataSource = 'Estimated';
+        
+        if (this.calculator.apcEnabled) {
+            thrustData = this.analyzer.getAPCThrustCurveData(config);
+            dataSource = 'APC Database';
+        } else {
+            thrustData = this.analyzer.getThrustCurveData(config);
+        }
         
         this.charts.thrustCurveChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: thrustData.map(d => `${d.throttle}%`),
                 datasets: [{
-                    label: 'Thrust (g)',
+                    label: `Thrust (${dataSource}) - grams`,
                     data: thrustData.map(d => d.thrust),
                     backgroundColor: 'rgba(54, 162, 235, 0.2)',
                     borderColor: 'rgba(54, 162, 235, 1)',
@@ -1063,21 +1071,31 @@ class DroneCharts {
             this.charts.propEfficiencyChart.destroy();
         }
         
-        // Get propeller efficiency data from analyzer
-        const propData = this.analyzer.getPropEfficiencyData(config);
+        // Get propeller efficiency data - use APC data if available
+        let propData;
+        let dataSource = 'Estimated';
+        
+        if (this.calculator.apcEnabled) {
+            propData = this.analyzer.getAPCPropEfficiencyData(config);
+            dataSource = 'APC Database';
+        } else {
+            propData = this.analyzer.getPropEfficiencyData(config);
+        }
         
         // Apply more robust decimal formatting
         const processedData = propData.map(d => ({
-            throttle: d.throttle,
-            efficiency: Number(Number(d.efficiency).toFixed(1))
+            rpmFactor: d.rpmFactor,
+            efficiency: Number(Number(d.efficiency).toFixed(1)),
+            thrust: d.thrust || 0,
+            power: d.power || 0
         }));
         
         this.charts.propEfficiencyChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: processedData.map(d => `${d.throttle}%`),
+                labels: processedData.map(d => `${d.rpmFactor}k RPM`),
                 datasets: [{
-                    label: 'Propeller Efficiency',
+                    label: `Propeller Efficiency (${dataSource})`,
                     data: processedData.map(d => d.efficiency),
                     backgroundColor: 'rgba(75, 192, 192, 0.2)',
                     borderColor: 'rgba(75, 192, 192, 1)',

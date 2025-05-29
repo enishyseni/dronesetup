@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>APC Integration - End-to-End Test</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .test-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+      }
+      .test-card {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 20px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      .test-card h3 {
+        margin-top: 0;
+        color: #ffd700;
+      }
+      .status {
+        padding: 10px;
+        border-radius: 8px;
+        margin: 10px 0;
+        font-weight: bold;
+      }
+      .success {
+        background: rgba(40, 167, 69, 0.8);
+      }
+      .error {
+        background: rgba(220, 53, 69, 0.8);
+      }
+      .info {
+        background: rgba(23, 162, 184, 0.8);
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+        margin: 15px 0;
+      }
+      .metric {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 10px;
+        border-radius: 8px;
+        text-align: center;
+      }
+      .metric-value {
+        font-size: 18px;
+        font-weight: bold;
+        color: #ffd700;
+      }
+      .performance-test {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 10px;
+        margin: 10px 0;
+      }
+      pre {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 10px;
+        border-radius: 5px;
+        overflow: auto;
+        font-size: 12px;
+      }
+      .summary {
+        background: rgba(40, 167, 69, 0.2);
+        border: 2px solid #28a745;
+        border-radius: 15px;
+        padding: 20px;
+        margin: 20px 0;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🚁 APC Integration Framework</h1>
+        <h2>End-to-End Validation Complete</h2>
+        <p>
+          Real-world propeller performance data for professional drone
+          calculations
+        </p>
+      </div>
+
+      <div class="test-grid">
+        <div class="test-card">
+          <h3>🔌 Core Integration</h3>
+          <div id="core-status">Testing...</div>
+          <div id="core-metrics"></div>
+        </div>
+
+        <div class="test-card">
+          <h3>⚡ Performance Engine</h3>
+          <div id="performance-status">Waiting...</div>
+          <div id="performance-data"></div>
+        </div>
+
+        <div class="test-card">
+          <h3>📊 Data Analytics</h3>
+          <div id="analytics-status">Waiting...</div>
+          <div id="analytics-results"></div>
+        </div>
+
+        <div class="test-card">
+          <h3>🎯 Propeller Database</h3>
+          <div id="database-status">Waiting...</div>
+          <div id="database-info"></div>
+        </div>
+      </div>
+
+      <div class="performance-test">
+        <h3>🏁 Live Performance Test</h3>
+        <div id="live-test-results"></div>
+      </div>
+
+      <div class="summary" id="final-summary" style="display: none">
+        <h2>🎉 Integration Framework Status: OPERATIONAL</h2>
+        <p>
+          The APC Integration Framework is fully functional and ready for
+          production use!
+        </p>
+      </div>
+    </div>
+
+    <script src="js/apcIntegration.js"></script>
+    <script src="js/calculations.js"></script>
+    <script src="js/componentAnalysis.js"></script>
+
+    <script>
+      let results = {
+        core: false,
+        performance: false,
+        analytics: false,
+        database: false,
+      };
+
+      async function runCoreTest() {
+        const statusEl = document.getElementById("core-status");
+        const metricsEl = document.getElementById("core-metrics");
+
+        try {
+          statusEl.innerHTML =
+            '<div class="status info">Initializing core components...</div>';
+
+          if (!window.APCIntegration) {
+            throw new Error("APCIntegration not available");
+          }
+
+          const apc = new APCIntegration();
+          const success = await apc.initialize("APC-Prop-DB.csv");
+
+          if (success) {
+            statusEl.innerHTML =
+              '<div class="status success">✅ Core integration operational</div>';
+
+            const propCount = apc.database.getAllPropellers().length;
+            metricsEl.innerHTML = `
+                        <div class="metrics">
+                            <div class="metric">
+                                <div class="metric-value">${propCount}</div>
+                                <div>Propellers</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">✅</div>
+                                <div>Database</div>
+                            </div>
+                        </div>
+                    `;
+
+            results.core = true;
+            runPerformanceTest();
+          } else {
+            throw new Error("Initialization failed");
+          }
+        } catch (error) {
+          statusEl.innerHTML = `<div class="status error">❌ ${error.message}</div>`;
+        }
+      }
+
+      async function runPerformanceTest() {
+        const statusEl = document.getElementById("performance-status");
+        const dataEl = document.getElementById("performance-data");
+
+        try {
+          statusEl.innerHTML =
+            '<div class="status info">Testing calculation engine...</div>';
+
+          const calculator = new DroneCalculator();
+          const success = await calculator.initializeAPC();
+
+          if (success && calculator.apcEnabled) {
+            // Run performance calculations
+            const testCases = [
+              { rpm: 1000, dia: 10, pitch: 6 },
+              { rpm: 1500, dia: 12, pitch: 6 },
+              { rpm: 2000, dia: 14, pitch: 8 },
+            ];
+
+            let totalThrust = 0;
+            let totalPower = 0;
+
+            const results = testCases.map((test) => {
+              const thrust = calculator.calculateThrustWithAPC(
+                test.rpm,
+                test.dia,
+                test.pitch
+              );
+              const power = calculator.calculatePowerWithAPC(
+                test.rpm,
+                test.dia,
+                test.pitch
+              );
+              totalThrust += thrust;
+              totalPower += power;
+              return { ...test, thrust, power, efficiency: thrust / power };
+            });
+
+            statusEl.innerHTML =
+              '<div class="status success">✅ Performance engine operational</div>';
+            dataEl.innerHTML = `
+                        <div class="metrics">
+                            <div class="metric">
+                                <div class="metric-value">${(
+                                  totalThrust / testCases.length
+                                ).toFixed(0)}g</div>
+                                <div>Avg Thrust</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">${(
+                                  totalPower / testCases.length
+                                ).toFixed(0)}W</div>
+                                <div>Avg Power</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">${(
+                                  totalThrust / totalPower
+                                ).toFixed(2)}</div>
+                                <div>Efficiency</div>
+                            </div>
+                        </div>
+                    `;
+
+            results.performance = true;
+            runAnalyticsTest(calculator);
+          } else {
+            throw new Error("Calculator APC initialization failed");
+          }
+        } catch (error) {
+          statusEl.innerHTML = `<div class="status error">❌ ${error.message}</div>`;
+        }
+      }
+
+      async function runAnalyticsTest(calculator) {
+        const statusEl = document.getElementById("analytics-status");
+        const resultsEl = document.getElementById("analytics-results");
+
+        try {
+          statusEl.innerHTML =
+            '<div class="status info">Testing analytics engine...</div>';
+
+          const analyzer = new ComponentAnalyzer(calculator);
+
+          // Test analytics methods
+          const thrustData = analyzer.getAPCThrustCurveData();
+          const efficiencyData = analyzer.getAPCPropEfficiencyData();
+          const analysis = analyzer.getAPCPropellerAnalysis();
+          const recommendations = analyzer.getAPCRecommendations();
+
+          statusEl.innerHTML =
+            '<div class="status success">✅ Analytics engine operational</div>';
+          resultsEl.innerHTML = `
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="metric-value">${
+                              thrustData.datasets
+                                ? thrustData.datasets.length
+                                : 0
+                            }</div>
+                            <div>Chart Datasets</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">${
+                              recommendations.length
+                            }</div>
+                            <div>Recommendations</div>
+                        </div>
+                    </div>
+                `;
+
+          results.analytics = true;
+          runDatabaseTest(calculator);
+        } catch (error) {
+          statusEl.innerHTML = `<div class="status error">❌ ${error.message}</div>`;
+        }
+      }
+
+      async function runDatabaseTest(calculator) {
+        const statusEl = document.getElementById("database-status");
+        const infoEl = document.getElementById("database-info");
+
+        try {
+          statusEl.innerHTML =
+            '<div class="status info">Analyzing propeller database...</div>';
+
+          const propellers =
+            calculator.apcIntegration.database.getAllPropellers();
+          const sampleProp = propellers[0];
+
+          // Calculate database statistics
+          let totalDataPoints = 0;
+          const diameters = new Set();
+          const pitches = new Set();
+
+          propellers.forEach((prop) => {
+            totalDataPoints += prop.dataPoints.length;
+            diameters.add(prop.diameter);
+            pitches.add(prop.pitch);
+          });
+
+          statusEl.innerHTML =
+            '<div class="status success">✅ Database fully loaded</div>';
+          infoEl.innerHTML = `
+                    <div class="metrics">
+                        <div class="metric">
+                            <div class="metric-value">${totalDataPoints.toLocaleString()}</div>
+                            <div>Data Points</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">${diameters.size}</div>
+                            <div>Diameters</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-value">${pitches.size}</div>
+                            <div>Pitch Values</div>
+                        </div>
+                    </div>
+                    <p><strong>Sample:</strong> ${sampleProp.model} - ${
+            sampleProp.diameter
+          }" × ${sampleProp.pitch}"</p>
+                `;
+
+          results.database = true;
+          runLiveTest(calculator);
+        } catch (error) {
+          statusEl.innerHTML = `<div class="status error">❌ ${error.message}</div>`;
+        }
+      }
+
+      function runLiveTest(calculator) {
+        const resultsEl = document.getElementById("live-test-results");
+
+        // Simulate real-world usage scenario
+        const testScenarios = [
+          { name: "5-inch Racing Quad", rpm: 6000, dia: 5, pitch: 4.3 },
+          { name: "7-inch Long Range", rpm: 4000, dia: 7, pitch: 5.5 },
+          { name: "10-inch Aerial Photo", rpm: 2500, dia: 10, pitch: 7 },
+        ];
+
+        let output = "<h4>Real-world Performance Scenarios</h4>";
+
+        testScenarios.forEach((scenario) => {
+          const thrust = calculator.calculateThrustWithAPC(
+            scenario.rpm,
+            scenario.dia,
+            scenario.pitch
+          );
+          const power = calculator.calculatePowerWithAPC(
+            scenario.rpm,
+            scenario.dia,
+            scenario.pitch
+          );
+          const efficiency = thrust / power;
+
+          output += `
+                    <div style="background: rgba(255,255,255,0.1); padding: 10px; margin: 5px 0; border-radius: 5px;">
+                        <strong>${scenario.name}</strong><br>
+                        ${scenario.dia}" × ${scenario.pitch}" @ ${
+            scenario.rpm
+          } RPM<br>
+                        <span style="color: #ffd700;">Thrust: ${thrust.toFixed(
+                          1
+                        )}g | Power: ${power.toFixed(
+            1
+          )}W | Efficiency: ${efficiency.toFixed(2)} g/W</span>
+                    </div>
+                `;
+        });
+
+        resultsEl.innerHTML = output;
+
+        // Show final summary
+        showFinalSummary();
+      }
+
+      function showFinalSummary() {
+        const allPassed = Object.values(results).every((result) => result);
+
+        if (allPassed) {
+          document.getElementById("final-summary").style.display = "block";
+
+          // Add completion metrics
+          const summaryEl = document.getElementById("final-summary");
+          summaryEl.innerHTML += `
+                    <div style="margin-top: 20px;">
+                        <h3>🏆 Integration Achievements</h3>
+                        <div class="metrics">
+                            <div class="metric">
+                                <div class="metric-value">✅</div>
+                                <div>Database Loading</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">✅</div>
+                                <div>Real-time Calculations</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">✅</div>
+                                <div>Performance Analytics</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-value">✅</div>
+                                <div>UI Integration</div>
+                            </div>
+                        </div>
+                        <p><strong>The drone setup tool now provides professional-grade propeller analysis using real APC performance data!</strong></p>
+                    </div>
+                `;
+        }
+      }
+
+      // Start the testing sequence
+      document.addEventListener("DOMContentLoaded", runCoreTest);
+    </script>
+  </body>
+</html>

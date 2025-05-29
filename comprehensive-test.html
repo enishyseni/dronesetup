@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Comprehensive APC Integration Test</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .success {
+        color: green;
+      }
+      .error {
+        color: red;
+      }
+      .warning {
+        color: orange;
+      }
+      .info {
+        color: blue;
+      }
+      canvas {
+        margin: 10px 0;
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <h1>Comprehensive APC Integration Test</h1>
+
+    <div class="test-section">
+      <h2>Test Results</h2>
+      <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>APC Database Test</h2>
+      <div id="database-results"></div>
+    </div>
+
+    <div class="test-section">
+      <h2>Performance Charts Test</h2>
+      <canvas id="thrustChart" width="400" height="200"></canvas>
+      <canvas id="efficiencyChart" width="400" height="200"></canvas>
+    </div>
+
+    <script src="js/apcIntegration.js"></script>
+    <script src="js/calculations.js"></script>
+    <script src="js/componentAnalysis.js"></script>
+
+    <script>
+      class ComprehensiveTest {
+        constructor() {
+          this.results = document.getElementById("results");
+          this.dbResults = document.getElementById("database-results");
+          this.testsPassed = 0;
+          this.testsTotal = 0;
+        }
+
+        log(message, type = "info") {
+          const className = type;
+          this.results.innerHTML += `<p class="${className}">${message}</p>`;
+          console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        logDB(message, type = "info") {
+          const className = type;
+          this.dbResults.innerHTML += `<p class="${className}">${message}</p>`;
+        }
+
+        async runTest(name, testFunction) {
+          this.testsTotal++;
+          try {
+            this.log(`Running ${name}...`);
+            const result = await testFunction();
+            if (result) {
+              this.testsPassed++;
+              this.log(`✓ ${name} PASSED`, "success");
+              return true;
+            } else {
+              this.log(`✗ ${name} FAILED`, "error");
+              return false;
+            }
+          } catch (error) {
+            this.log(`✗ ${name} ERROR: ${error.message}`, "error");
+            console.error(error);
+            return false;
+          }
+        }
+
+        async testAPCInitialization() {
+          const calculator = new DroneCalculator();
+          calculator.setDroneType("fpv");
+
+          const success = await calculator.initializeAPC();
+          this.log(
+            `APC initialized: ${success ? "YES" : "NO"}`,
+            success ? "success" : "error"
+          );
+          return success;
+        }
+
+        async testDatabaseAccess() {
+          const calculator = new DroneCalculator();
+          await calculator.initializeAPC();
+
+          if (!calculator.apcIntegration || !calculator.apcIntegration.propDB) {
+            return false;
+          }
+
+          const db = calculator.apcIntegration.propDB;
+
+          // Test basic database functions
+          const allProps = db.getAllPropellers();
+          this.logDB(
+            `Total propellers in database: ${Object.keys(allProps).length}`
+          );
+
+          const testPropId = Object.keys(allProps)[0];
+          if (testPropId) {
+            const propSpecs = db.getPropellerSpecs(testPropId);
+            this.logDB(
+              `Sample propeller: ${testPropId} - ${
+                propSpecs ? "Found" : "Not Found"
+              }`,
+              propSpecs ? "success" : "error"
+            );
+
+            if (propSpecs) {
+              this.logDB(`  Diameter: ${propSpecs.diameter}`, "info");
+              this.logDB(`  Pitch: ${propSpecs.pitch}`, "info");
+              this.logDB(
+                `  Data points: ${
+                  propSpecs.dataPoints ? propSpecs.dataPoints.length : 0
+                }`,
+                "info"
+              );
+            }
+          }
+
+          return Object.keys(allProps).length > 0;
+        }
+
+        async testThrustCurveGeneration() {
+          const calculator = new DroneCalculator();
+          await calculator.initializeAPC();
+
+          const analyzer = new ComponentAnalyzer(calculator);
+          const config = {
+            frameSize: "5inch",
+            motorKv: "2400",
+            batteryType: "lipo-4s",
+          };
+
+          const thrustData = analyzer.getAPCThrustCurveData(config);
+
+          if (thrustData && thrustData.length > 0) {
+            this.log(
+              `Thrust curve generated with ${thrustData.length} points`,
+              "success"
+            );
+
+            // Test that we have valid data structure
+            const samplePoint = thrustData[Math.floor(thrustData.length / 2)];
+            if (
+              samplePoint.thrust !== undefined &&
+              samplePoint.throttle !== undefined
+            ) {
+              this.log(
+                `Sample point: ${samplePoint.thrust}g at ${samplePoint.throttle}% throttle`,
+                "info"
+              );
+              return true;
+            }
+          }
+
+          return false;
+        }
+
+        async testEfficiencyDataGeneration() {
+          const calculator = new DroneCalculator();
+          await calculator.initializeAPC();
+
+          const analyzer = new ComponentAnalyzer(calculator);
+          const config = {
+            frameSize: "5inch",
+            motorKv: "2400",
+            batteryType: "lipo-4s",
+          };
+
+          const effData = analyzer.getAPCPropEfficiencyData(config);
+
+          if (effData && effData.length > 0) {
+            this.log(
+              `Efficiency data generated with ${effData.length} points`,
+              "success"
+            );
+
+            // Test that we have valid data structure
+            const samplePoint = effData[Math.floor(effData.length / 2)];
+            if (
+              samplePoint.efficiency !== undefined &&
+              samplePoint.rpm !== undefined
+            ) {
+              this.log(
+                `Sample point: ${samplePoint.efficiency}% at ${samplePoint.rpm} RPM`,
+                "info"
+              );
+              return true;
+            }
+          }
+
+          return false;
+        }
+
+        async testErrorRecovery() {
+          // Test what happens when APC data is not available
+          const analyzer = new ComponentAnalyzer(null); // No calculator
+
+          const config = {
+            frameSize: "5inch",
+            motorKv: "2400",
+            batteryType: "lipo-4s",
+          };
+
+          try {
+            const thrustData = analyzer.getAPCThrustCurveData(config);
+            // Should fallback to basic calculation without error
+            return thrustData && thrustData.length > 0;
+          } catch (error) {
+            this.log(`Error recovery failed: ${error.message}`, "error");
+            return false;
+          }
+        }
+
+        async testChartGeneration() {
+          try {
+            const calculator = new DroneCalculator();
+            await calculator.initializeAPC();
+
+            const analyzer = new ComponentAnalyzer(calculator);
+            const config = {
+              frameSize: "5inch",
+              motorKv: "2400",
+              batteryType: "lipo-4s",
+            };
+
+            // Generate data
+            const thrustData = analyzer.getAPCThrustCurveData(config);
+            const effData = analyzer.getAPCPropEfficiencyData(config);
+
+            // Create thrust chart
+            if (thrustData && thrustData.length > 0) {
+              const thrustCtx = document
+                .getElementById("thrustChart")
+                .getContext("2d");
+              new Chart(thrustCtx, {
+                type: "line",
+                data: {
+                  labels: thrustData.map((d) => d.throttle + "%"),
+                  datasets: [
+                    {
+                      label: "Thrust (g)",
+                      data: thrustData.map((d) => d.thrust),
+                      borderColor: "rgb(75, 192, 192)",
+                      tension: 0.1,
+                    },
+                  ],
+                },
+                options: {
+                  responsive: false,
+                  plugins: {
+                    title: {
+                      display: true,
+                      text: "APC Thrust Curve",
+                    },
+                  },
+                },
+              });
+            }
+
+            // Create efficiency chart
+            if (effData && effData.length > 0) {
+              const effCtx = document
+                .getElementById("efficiencyChart")
+                .getContext("2d");
+              new Chart(effCtx, {
+                type: "line",
+                data: {
+                  labels: effData.map((d) => d.rpm),
+                  datasets: [
+                    {
+                      label: "Efficiency (%)",
+                      data: effData.map((d) => d.efficiency),
+                      borderColor: "rgb(255, 99, 132)",
+                      tension: 0.1,
+                    },
+                  ],
+                },
+                options: {
+                  responsive: false,
+                  plugins: {
+                    title: {
+                      display: true,
+                      text: "APC Propeller Efficiency",
+                    },
+                  },
+                },
+              });
+            }
+
+            return thrustData && effData;
+          } catch (error) {
+            this.log(`Chart generation failed: ${error.message}`, "error");
+            return false;
+          }
+        }
+
+        async runAllTests() {
+          this.log("Starting comprehensive APC integration tests...", "info");
+
+          await this.runTest("APC Initialization", () =>
+            this.testAPCInitialization()
+          );
+          await this.runTest("Database Access", () =>
+            this.testDatabaseAccess()
+          );
+          await this.runTest("Thrust Curve Generation", () =>
+            this.testThrustCurveGeneration()
+          );
+          await this.runTest("Efficiency Data Generation", () =>
+            this.testEfficiencyDataGeneration()
+          );
+          await this.runTest("Error Recovery", () => this.testErrorRecovery());
+          await this.runTest("Chart Generation", () =>
+            this.testChartGeneration()
+          );
+
+          this.log(
+            `\nTest Summary: ${this.testsPassed}/${this.testsTotal} tests passed`,
+            this.testsPassed === this.testsTotal ? "success" : "warning"
+          );
+
+          if (this.testsPassed === this.testsTotal) {
+            this.log(
+              "🎉 All tests passed! APC integration is working correctly.",
+              "success"
+            );
+          } else {
+            this.log(
+              "⚠️ Some tests failed. Check the details above.",
+              "warning"
+            );
+          }
+        }
+      }
+
+      // Run tests when page loads
+      window.addEventListener("load", async () => {
+        const tester = new ComprehensiveTest();
+        await tester.runAllTests();
+      });
+    </script>
+  </body>
+</html>

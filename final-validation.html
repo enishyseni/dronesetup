@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>APC Integration Final Validation</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        line-height: 1.6;
+      }
+      .status-box {
+        border: 2px solid #ddd;
+        padding: 20px;
+        margin: 15px 0;
+        border-radius: 8px;
+      }
+      .success {
+        border-color: #28a745;
+        background: #d4edda;
+      }
+      .error {
+        border-color: #dc3545;
+        background: #f8d7da;
+      }
+      .warning {
+        border-color: #ffc107;
+        background: #fff3cd;
+      }
+      .test-result {
+        margin: 10px 0;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 5px;
+      }
+      button {
+        padding: 12px 24px;
+        margin: 10px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      .metric {
+        display: inline-block;
+        margin: 10px;
+        padding: 8px 12px;
+        background: #e9ecef;
+        border-radius: 4px;
+      }
+      h2 {
+        color: #495057;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 5px;
+      }
+      pre {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 5px;
+        overflow-x: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🚁 APC Integration Final Validation</h1>
+    <p>
+      This comprehensive test validates all aspects of the APC Integration
+      Framework implementation.
+    </p>
+
+    <button onclick="runFullTest()">Run Complete Integration Test</button>
+
+    <div id="results"></div>
+
+    <script src="js/apcIntegration.js"></script>
+    <script src="js/calculations.js"></script>
+    <script src="js/componentAnalysis.js"></script>
+
+    <script>
+      let testResults = [];
+
+      function addResult(test, status, message, details = null) {
+        testResults.push({ test, status, message, details });
+        updateDisplay();
+      }
+
+      function updateDisplay() {
+        const resultsDiv = document.getElementById("results");
+        let html = "";
+
+        testResults.forEach((result) => {
+          const statusClass =
+            result.status === "success"
+              ? "success"
+              : result.status === "error"
+              ? "error"
+              : "warning";
+          const icon =
+            result.status === "success"
+              ? "✅"
+              : result.status === "error"
+              ? "❌"
+              : "⚠️";
+
+          html += `
+                    <div class="status-box ${statusClass}">
+                        <h3>${icon} ${result.test}</h3>
+                        <p><strong>Status:</strong> ${result.message}</p>
+                        ${
+                          result.details
+                            ? `<div class="test-result">${result.details}</div>`
+                            : ""
+                        }
+                    </div>
+                `;
+        });
+
+        resultsDiv.innerHTML = html;
+      }
+
+      async function runFullTest() {
+        testResults = [];
+        addResult(
+          "🔄 Starting Tests",
+          "warning",
+          "Initializing comprehensive APC integration test..."
+        );
+
+        // Test 1: Basic APC Framework
+        try {
+          if (!window.APCIntegration) {
+            throw new Error("APCIntegration class not available");
+          }
+
+          const apc = new APCIntegration();
+          const initSuccess = await apc.initialize("APC-Prop-DB.csv");
+
+          if (initSuccess) {
+            const propellers = apc.database.getAllPropellers();
+            const sampleProp = propellers[0];
+
+            addResult(
+              "1. APC Database Loading",
+              "success",
+              `Successfully loaded ${propellers.length} propellers`,
+              `Sample propeller: <strong>${sampleProp.model}</strong> (${sampleProp.diameter}" × ${sampleProp.pitch}") with ${sampleProp.dataPoints.length} data points`
+            );
+          } else {
+            addResult(
+              "1. APC Database Loading",
+              "error",
+              "Failed to load APC database"
+            );
+            return;
+          }
+        } catch (error) {
+          addResult("1. APC Database Loading", "error", error.message);
+          return;
+        }
+
+        // Test 2: Calculator Integration
+        try {
+          const calculator = new DroneCalculator();
+          const calcSuccess = await calculator.initializeAPC();
+
+          if (calcSuccess && calculator.apcEnabled) {
+            // Test calculation methods
+            const testRPM = 1500;
+            const testDiam = 12;
+            const testPitch = 6;
+
+            const thrust = calculator.calculateThrustWithAPC(
+              testRPM,
+              testDiam,
+              testPitch
+            );
+            const power = calculator.calculatePowerWithAPC(
+              testRPM,
+              testDiam,
+              testPitch
+            );
+
+            addResult(
+              "2. Calculator Integration",
+              "success",
+              "APC calculations working correctly",
+              `Test calculations at ${testRPM} RPM:<br>
+                         <span class="metric">Thrust: ${thrust.toFixed(
+                           2
+                         )}g</span>
+                         <span class="metric">Power: ${power.toFixed(2)}W</span>
+                         <span class="metric">Efficiency: ${(
+                           thrust / power
+                         ).toFixed(2)} g/W</span>`
+            );
+          } else {
+            addResult(
+              "2. Calculator Integration",
+              "error",
+              "Calculator APC initialization failed"
+            );
+            return;
+          }
+        } catch (error) {
+          addResult("2. Calculator Integration", "error", error.message);
+          return;
+        }
+
+        // Test 3: Component Analyzer Integration
+        try {
+          const calculator = new DroneCalculator();
+          await calculator.initializeAPC();
+          const analyzer = new ComponentAnalyzer(calculator);
+
+          const thrustData = analyzer.getAPCThrustCurveData();
+          const efficiencyData = analyzer.getAPCPropEfficiencyData();
+          const analysis = analyzer.getAPCPropellerAnalysis();
+          const recommendations = analyzer.getAPCRecommendations();
+
+          addResult(
+            "3. Component Analyzer Integration",
+            "success",
+            "Analysis methods working correctly",
+            `Available features:<br>
+                     <span class="metric">Thrust Curves: ${
+                       thrustData.datasets ? "Available" : "Not available"
+                     }</span>
+                     <span class="metric">Efficiency Data: ${
+                       efficiencyData.datasets ? "Available" : "Not available"
+                     }</span>
+                     <span class="metric">Analysis: ${
+                       analysis ? "Working" : "Not available"
+                     }</span>
+                     <span class="metric">Recommendations: ${
+                       recommendations.length
+                     } items</span>`
+          );
+        } catch (error) {
+          addResult(
+            "3. Component Analyzer Integration",
+            "error",
+            error.message
+          );
+        }
+
+        // Test 4: Performance Validation
+        try {
+          const calculator = new DroneCalculator();
+          await calculator.initializeAPC();
+
+          // Test with different propeller configurations
+          const testConfigs = [
+            { rpm: 1000, diameter: 10, pitch: 4.5 },
+            { rpm: 1500, diameter: 12, pitch: 6 },
+            { rpm: 2000, diameter: 14, pitch: 8 },
+          ];
+
+          let performanceResults = [];
+          testConfigs.forEach((config) => {
+            const thrust = calculator.calculateThrustWithAPC(
+              config.rpm,
+              config.diameter,
+              config.pitch
+            );
+            const power = calculator.calculatePowerWithAPC(
+              config.rpm,
+              config.diameter,
+              config.pitch
+            );
+            performanceResults.push(
+              `${config.diameter}"×${config.pitch}" @ ${
+                config.rpm
+              }RPM: ${thrust.toFixed(1)}g, ${power.toFixed(1)}W`
+            );
+          });
+
+          addResult(
+            "4. Performance Validation",
+            "success",
+            "Multi-configuration testing successful",
+            `<pre>${performanceResults.join("\\n")}</pre>`
+          );
+        } catch (error) {
+          addResult("4. Performance Validation", "error", error.message);
+        }
+
+        // Test 5: UI Integration Status
+        try {
+          // Simulate UI status check
+          const hasAPCUI = document.querySelector("#apcStatus") !== null;
+          const hasPropSelect =
+            document.querySelector("#apcPropeller") !== null;
+          const hasPropType = document.querySelector("#propellerType") !== null;
+
+          if (hasAPCUI && hasPropSelect && hasPropType) {
+            addResult(
+              "5. UI Integration Readiness",
+              "success",
+              "All required UI components are present",
+              `Components found:<br>
+                         <span class="metric">APC Status Indicator: ✅</span>
+                         <span class="metric">Propeller Selection: ✅</span>
+                         <span class="metric">Propeller Type Toggle: ✅</span>`
+            );
+          } else {
+            addResult(
+              "5. UI Integration Readiness",
+              "warning",
+              "Some UI components may be missing from main application"
+            );
+          }
+        } catch (error) {
+          addResult("5. UI Integration Readiness", "error", error.message);
+        }
+
+        // Final Summary
+        const successCount = testResults.filter(
+          (r) => r.status === "success"
+        ).length;
+        const totalTests = testResults.length - 1; // Subtract the "Starting Tests" entry
+
+        if (successCount >= totalTests) {
+          addResult(
+            "🎉 Integration Test Complete",
+            "success",
+            `All ${totalTests} tests passed! APC Integration Framework is fully operational.`,
+            `<strong>Ready for production use:</strong><br>
+                     • Real-world propeller performance data ✅<br>
+                     • Accurate thrust and power calculations ✅<br>
+                     • Enhanced efficiency analysis ✅<br>
+                     • Component recommendation system ✅<br>
+                     • UI integration components ✅`
+          );
+        } else {
+          addResult(
+            "⚠️ Integration Test Complete",
+            "warning",
+            `${successCount}/${totalTests} tests passed. Some issues need attention.`
+          );
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -102,6 +102,33 @@
             </select>
           </div>
 
+          <div class="config-section">
+            <label for="propellerType">Propeller Selection</label>
+            <select id="propellerType" class="glass-select">
+              <option value="auto" selected>Auto (Best Match)</option>
+              <option value="manual">Manual APC Selection</option>
+            </select>
+          </div>
+
+          <div
+            id="apcPropSelection"
+            class="config-section"
+            style="display: none"
+          >
+            <label for="apcPropeller">APC Propeller</label>
+            <select id="apcPropeller" class="glass-select">
+              <option value="">Loading propellers...</option>
+            </select>
+          </div>
+
+          <!-- APC Integration Status -->
+          <div class="config-section" id="apcStatus" style="display: none">
+            <div class="apc-status-indicator">
+              <span class="status-icon">🚁</span>
+              <span class="status-text">APC Database Active</span>
+            </div>
+          </div>
+
           <div class="config-section fixed-wing-only hidden">
             <label for="wingspan">Wingspan</label>
             <select id="wingspan" class="glass-select">
@@ -368,9 +395,11 @@
       </footer>
     </div>
 
+    <script src="js/apcIntegration.js"></script>
     <script src="js/calculations.js"></script>
     <script src="js/componentAnalysis.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/main.js"></script>
+    <script src="js/apcDemo.js"></script>
   </body>
 </html>

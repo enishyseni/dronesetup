@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>APC Debug</title>
+  </head>
+  <body>
+    <h1>APC Integration Debug</h1>
+    <div id="status"></div>
+    <div id="output"></div>
+
+    <script src="js/apcIntegration.js"></script>
+    <script>
+      async function testAPC() {
+        const statusDiv = document.getElementById("status");
+        const outputDiv = document.getElementById("output");
+
+        statusDiv.innerHTML = "Testing APC Integration...";
+
+        try {
+          // Test if APCIntegration is available
+          if (!window.APCIntegration) {
+            throw new Error("APCIntegration not found");
+          }
+
+          statusDiv.innerHTML = "APCIntegration class found. Initializing...";
+
+          const apc = new APCIntegration();
+          const success = await apc.initialize("APC-Prop-DB.csv");
+
+          if (success) {
+            statusDiv.innerHTML = "✅ APC Integration successful!";
+            const propellers = apc.database.getAllPropellers();
+            outputDiv.innerHTML = `<p>Loaded ${propellers.length} propellers</p>`;
+
+            if (propellers.length > 0) {
+              outputDiv.innerHTML += `<p>First propeller: ${propellers[0].model}</p>`;
+            }
+          } else {
+            statusDiv.innerHTML = "❌ APC Integration failed";
+          }
+        } catch (error) {
+          statusDiv.innerHTML = "❌ Error: " + error.message;
+          outputDiv.innerHTML = "<pre>" + error.stack + "</pre>";
+        }
+      }
+
+      // Run test when page loads
+      document.addEventListener("DOMContentLoaded", testAPC);
+    </script>
+  </body>
+</html>

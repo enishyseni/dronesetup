@@ -2,6 +2,8 @@ class DroneCalculator {
     constructor() {
         this.droneType = 'fpv'; // 'fpv' or 'fixedWing'
         this.apcPropData = null; // For future APC integration
+        this.apcIntegration = null; // APC Integration instance
+        this.apcEnabled = false; // Flag for APC integration status
     }
 
     setDroneType(type) {
@@ -574,15 +576,122 @@ class DroneCalculator {
     }
 
     /**
-     * Load APC propeller database
+     * Initialize APC Integration Framework
      */
-    async loadAPCData(dataPath = './data/apc_props.json') {
+    async initializeAPC() {
         try {
-            const response = await fetch(dataPath);
-            this.apcPropData = await response.json();
-            console.log('APC propeller data loaded successfully');
+            if (!window.APCIntegration) {
+                console.warn('APC Integration module not loaded');
+                return false;
+            }
+            
+            this.apcIntegration = new APCIntegration();
+            const success = await this.apcIntegration.initialize('APC-Prop-DB.csv');
+            this.apcEnabled = success;
+            
+            if (success) {
+                console.log('APC Integration initialized successfully');
+                // Update UI to show APC is available
+                this.updateAPCStatus(true);
+            } else {
+                console.warn('Failed to initialize APC database');
+                this.updateAPCStatus(false);
+            }
+            
+            return success;
         } catch (error) {
-            console.warn('Could not load APC propeller data:', error);
+            console.error('Error initializing APC integration:', error);
+            this.apcEnabled = false;
+            this.updateAPCStatus(false);
+            return false;
+        }
+    }
+
+    updateAPCStatus(isEnabled) {
+        const statusElement = document.getElementById('apcStatus');
+        if (statusElement) {
+            statusElement.className = isEnabled ? 'apc-status apc-enabled' : 'apc-status apc-disabled';
+            statusElement.textContent = isEnabled ? 'APC Database: Connected' : 'APC Database: Offline';
+        }
+    }
+
+    async calculateThrustWithAPC(config, throttlePercent = 100) {
+        if (!this.apcEnabled || !this.apcIntegration) {
+            return this.calculateThrust(config, throttlePercent);
+        }
+
+        try {
+            const propeller = this.getSelectedPropeller(config);
+            if (!propeller) {
+                return this.calculateThrust(config, throttlePercent);
+            }
+
+            const rpm = this.calculateRPM(config, throttlePercent);
+            const thrustData = await this.apcIntegration.calculateThrust(propeller, rpm);
+            
+            return thrustData ? thrustData.thrust : this.calculateThrust(config, throttlePercent);
+        } catch (error) {
+            console.error('Error calculating thrust with APC:', error);
+            return this.calculateThrust(config, throttlePercent);
+        }
+    }
+
+    async calculatePowerWithAPC(config, throttlePercent = 100) {
+        if (!this.apcEnabled || !this.apcIntegration) {
+            return this.calculatePower(config, throttlePercent);
+        }
+
+        try {
+            const propeller = this.getSelectedPropeller(config);
+            if (!propeller) {
+                return this.calculatePower(config, throttlePercent);
+            }
+
+            const rpm = this.calculateRPM(config, throttlePercent);
+            const powerData = await this.apcIntegration.calculatePower(propeller, rpm);
+            
+            return powerData ? powerData.power : this.calculatePower(config, throttlePercent);
+        } catch (error) {
+            console.error('Error calculating power with APC:', error);
+            return this.calculatePower(config, throttlePercent);
+        }
+    }
+
+    getSelectedPropeller(config) {
+        const propSelectionMode = document.getElementById('propellerSelectionMode')?.value || 'auto';
+        
+        if (propSelectionMode === 'manual') {
+            const selectedProp = document.getElementById('apcPropellerSelect')?.value;
+            if (selectedProp && this.apcIntegration) {
+                return this.apcIntegration.database.findPropeller(selectedProp);
+            }
+        }
+        
+        // Auto selection based on configuration
+        if (this.apcIntegration && this.apcEnabled) {
+            return this.apcIntegration.selectOptimalPropeller(config);
+        }
+        
+        return null;
+    }
+
+    generateAPCPerformanceData(config) {
+        if (!this.apcEnabled || !this.apcIntegration) {
+            return null;
+        }
+
+        try {
+            const propeller = this.getSelectedPropeller(config);
+            if (!propeller) {
+                return null;
+            }
+
+            // Pass propeller ID to generatePerformanceData method
+            const propId = propeller.id || propeller;
+            return this.apcIntegration.generatePerformanceData(config, propId);
+        } catch (error) {
+            console.error('Error generating APC performance data:', error);
+            return null;
         }
     }
 

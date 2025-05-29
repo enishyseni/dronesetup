@@ -573,3 +573,55 @@ footer {
     transform: rotate(360deg);
   }
 }
+
+/* APC Integration Status Styles */
+.apc-status-enabled {
+  background: linear-gradient(135deg, #00ff88 0%, #00cc6a 100%);
+  border: 1px solid #00ff88;
+  animation: pulse-green 2s ease-in-out infinite alternate;
+}
+
+.apc-status-disabled {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+  border: 1px solid #ff6b6b;
+  opacity: 0.7;
+}
+
+.apc-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: 500;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.status-icon {
+  font-size: 16px;
+}
+
+.status-text {
+  font-size: 14px;
+}
+
+@keyframes pulse-green {
+  from {
+    box-shadow: 0 0 5px rgba(0, 255, 136, 0.5);
+  }
+  to {
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.8);
+  }
+}
+
+/* APC Propeller Selection */
+#apcPropSelection.config-section {
+  border-left: 3px solid #00ff88;
+  background: rgba(0, 255, 136, 0.05);
+}
+
+#apcPropSelection label {
+  color: #00ff88;
+  font-weight: 600;
+}

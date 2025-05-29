@@ -6,6 +6,9 @@ document.addEventListener('DOMContentLoaded', function() {
         calculator = new DroneCalculator();
         componentAnalyzer = new ComponentAnalyzer(calculator);
         droneCharts = new DroneCharts(calculator, componentAnalyzer);
+        
+        // Initialize APC Integration
+        initializeAPCIntegration();
     } catch (error) {
         console.error('Failed to initialize calculators:', error);
         showUserError('Failed to initialize application. Please refresh the page.');
@@ -358,6 +361,117 @@ document.addEventListener('DOMContentLoaded', function() {
     // Event listener for drone type toggle
     droneTypeToggle.addEventListener('change', toggleDroneType);
     
+    // APC Propeller selection event listeners
+    const propellerTypeSelect = document.getElementById('propellerType');
+    const apcPropSelection = document.getElementById('apcPropSelection');
+    const apcPropellerSelect = document.getElementById('apcPropeller');
+    
+    if (propellerTypeSelect) {
+        propellerTypeSelect.addEventListener('change', function() {
+            const isManual = this.value === 'manual';
+            apcPropSelection.style.display = isManual ? 'block' : 'none';
+            
+            if (isManual && calculator.apcEnabled) {
+                updateAPCPropellerList();
+            }
+            
+            updateResults();
+        });
+    }
+    
+    if (apcPropellerSelect) {
+        apcPropellerSelect.addEventListener('change', updateResults);
+    }
+    
+    // APC Integration Functions
+    async function initializeAPCIntegration() {
+        try {
+            console.log('Initializing APC Integration...');
+            const success = await calculator.initializeAPC();
+            
+            if (success) {
+                setupAPCEventHandlers();
+                await updateAPCPropellerList();
+                showAPCStatus(true);
+                console.log('APC Integration ready');
+            } else {
+                showAPCStatus(false);
+                console.warn('APC Integration failed to initialize');
+            }
+        } catch (error) {
+            console.error('Error during APC initialization:', error);
+            showAPCStatus(false);
+        }
+    }
+
+    function setupAPCEventHandlers() {
+        const propellerTypeSelect = document.getElementById('propellerType');
+        const apcPropellerSelect = document.getElementById('apcPropeller');
+        const apcPropSelection = document.getElementById('apcPropSelection');
+
+        if (propellerTypeSelect) {
+            propellerTypeSelect.addEventListener('change', function() {
+                const isManual = this.value === 'manual';
+                if (apcPropSelection) {
+                    apcPropSelection.style.display = isManual ? 'block' : 'none';
+                }
+                
+                // Update calculations when propeller selection mode changes
+                updateResults();
+            });
+        }
+
+        if (apcPropellerSelect) {
+            apcPropellerSelect.addEventListener('change', function() {
+                // Update calculations when specific propeller is selected
+                updateResults();
+            });
+        }
+    }
+
+    async function updateAPCPropellerList() {
+        const apcPropellerSelect = document.getElementById('apcPropeller');
+        if (!apcPropellerSelect || !calculator.apcEnabled || !calculator.apcIntegration) {
+            return;
+        }
+
+        try {
+            const propellers = calculator.apcIntegration.database.getAllPropellers();
+            apcPropellerSelect.innerHTML = '<option value="">Select Propeller...</option>';
+            
+            propellers.forEach(prop => {
+                const option = document.createElement('option');
+                option.value = prop.model;
+                option.textContent = `${prop.diameter}"x${prop.pitch}" - ${prop.model}`;
+                apcPropellerSelect.appendChild(option);
+            });
+            
+            console.log(`Loaded ${propellers.length} APC propellers`);
+        } catch (error) {
+            console.error('Error updating APC propeller list:', error);
+            apcPropellerSelect.innerHTML = '<option value="">Error loading propellers</option>';
+        }
+    }
+
+    function showAPCStatus(isEnabled) {
+        const apcStatus = document.getElementById('apcStatus');
+        if (apcStatus) {
+            apcStatus.style.display = 'block';
+            const statusText = apcStatus.querySelector('.status-text');
+            const statusIcon = apcStatus.querySelector('.status-icon');
+            
+            if (isEnabled) {
+                apcStatus.className = 'config-section apc-status-enabled';
+                if (statusText) statusText.textContent = 'APC Database Active';
+                if (statusIcon) statusIcon.textContent = '✅';
+            } else {
+                apcStatus.className = 'config-section apc-status-disabled';
+                if (statusText) statusText.textContent = 'APC Database Offline';
+                if (statusIcon) statusIcon.textContent = '❌';
+            }
+        }
+    }
+    
     // Enhanced initialization with better error handling
     try {
         // Initialize sliders
@@ -369,13 +483,36 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initial update of metrics
         updateResults();
         
-        // Try to load APC data if available
-        calculator.loadAPCData().then(() => {
-            console.log('APC propeller data integration ready');
-            showUserInfo('Enhanced propeller calculations available');
+        // Initialize APC Integration Framework
+        calculator.initializeAPC().then((success) => {
+            if (success) {
+                console.log('APC Integration Framework ready');
+                showUserInfo('Enhanced APC propeller calculations available');
+                
+                // Show APC status indicator
+                const apcStatus = document.getElementById('apcStatus');
+                if (apcStatus) {
+                    apcStatus.style.display = 'block';
+                }
+                
+                // Update propeller list if manual selection is active
+                const propellerType = document.getElementById('propellerType');
+                if (propellerType && propellerType.value === 'manual') {
+                    updateAPCPropellerList();
+                }
+                
+                // Refresh charts with APC data
+                updateResults();
+                
+            } else {
+                console.log('APC data not available - using simplified calculations');
+            }
         }).catch(() => {
             console.log('APC data not available - using simplified calculations');
         });
+        
+        // Try to load legacy calculator data if available
+        // This is kept for backwards compatibility but APC integration is handled above
         
         // Initialize charts with data after a delay to ensure DOM is ready
         setTimeout(() => {

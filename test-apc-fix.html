@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>APC Integration Test</title>
+  </head>
+  <body>
+    <h1>APC Integration Test</h1>
+    <div id="results"></div>
+
+    <script src="js/apcIntegration.js"></script>
+    <script src="js/calculations.js"></script>
+    <script src="js/componentAnalysis.js"></script>
+
+    <script>
+      async function testAPCIntegration() {
+        const results = document.getElementById("results");
+
+        try {
+          results.innerHTML = "<p>Testing APC Integration...</p>";
+
+          // Initialize calculator
+          const calculator = new DroneCalculator();
+          calculator.setDroneType("fpv");
+
+          // Initialize APC
+          const success = await calculator.initializeAPC();
+          results.innerHTML += `<p>APC Initialization: ${
+            success ? "SUCCESS" : "FAILED"
+          }</p>`;
+
+          if (success) {
+            // Create component analyzer
+            const analyzer = new ComponentAnalyzer(calculator);
+
+            // Test configuration
+            const config = {
+              frameSize: "5inch",
+              motorKv: "2400",
+              batteryType: "lipo-4s",
+            };
+
+            // Test thrust curve data
+            try {
+              const thrustData = analyzer.getAPCThrustCurveData(config);
+              results.innerHTML += `<p>Thrust Curve Data: ${
+                thrustData ? "SUCCESS" : "FAILED"
+              }</p>`;
+
+              if (thrustData && thrustData.length > 0) {
+                results.innerHTML += `<p>Data points: ${thrustData.length}</p>`;
+                results.innerHTML += `<p>Sample thrust: ${thrustData[5].thrust}g at ${thrustData[5].throttle}% throttle</p>`;
+              }
+            } catch (error) {
+              results.innerHTML += `<p>Thrust Curve Error: ${error.message}</p>`;
+            }
+
+            // Test efficiency data
+            try {
+              const effData = analyzer.getAPCPropEfficiencyData(config);
+              results.innerHTML += `<p>Efficiency Data: ${
+                effData ? "SUCCESS" : "FAILED"
+              }</p>`;
+
+              if (effData && effData.length > 0) {
+                results.innerHTML += `<p>Efficiency points: ${effData.length}</p>`;
+                results.innerHTML += `<p>Sample efficiency: ${effData[2].efficiency}% at ${effData[2].rpm} RPM</p>`;
+              }
+            } catch (error) {
+              results.innerHTML += `<p>Efficiency Data Error: ${error.message}</p>`;
+            }
+          }
+
+          results.innerHTML +=
+            '<p style="color: green;">Test completed successfully!</p>';
+        } catch (error) {
+          results.innerHTML += `<p style="color: red;">Test failed: ${error.message}</p>`;
+          console.error("Test error:", error);
+        }
+      }
+
+      // Run test when page loads
+      window.addEventListener("load", testAPCIntegration);
+    </script>
+  </body>
+</html>
