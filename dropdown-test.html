@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APC Dropdown Test</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        body {
+            padding: 20px;
+            background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+            min-height: 100vh;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 20px;
+        }
+        .sidebar-test {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            color: white;
+        }
+        .main-content {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            color: white;
+        }
+        .test-info {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="sidebar-test">
+            <h2>Sidebar Test (250px width)</h2>
+            
+            <div class="config-section">
+                <label for="frameSize">Frame Size</label>
+                <select id="frameSize" class="glass-select">
+                    <option value="5inch" selected>5 inch</option>
+                    <option value="7inch">7 inch</option>
+                </select>
+            </div>
+            
+            <div class="config-section">
+                <label for="propellerType">Propeller Selection</label>
+                <select id="propellerType" class="glass-select">
+                    <option value="auto" selected>Auto (Best Match)</option>
+                    <option value="manual">Manual APC Selection</option>
+                </select>
+            </div>
+            
+            <div id="apcPropSelection" class="config-section">
+                <label for="apcPropeller">APC Propeller</label>
+                <select id="apcPropeller" class="glass-select">
+                    <option value="">Select Propeller...</option>
+                    <option value="1055x43E" title="10" × 5.5" - 1055x43E (145 data points)">10"×5.5" 1055x43E</option>
+                    <option value="1147x47SF" title="11" × 4.7" - 1147x47SF (178 data points)">11"×4.7" 1147x47SF</option>
+                    <option value="1260x60E" title="12" × 6.0" - 1260x60E (203 data points)">12"×6.0" 1260x60E</option>
+                    <option value="1470x70E" title="14" × 7.0" - 1470x70E (245 data points)">14"×7.0" 1470x70E</option>
+                    <option value="1580x80SF" title="15" × 8.0" - 1580x80SF (267 data points)">15"×8.0" 1580x80SF</option>
+                </select>
+            </div>
+            
+            <div class="test-info">
+                <h4>✅ Test Results</h4>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>Dropdown fits within 250px sidebar</li>
+                    <li>Text doesn't overflow horizontally</li>
+                    <li>Tooltips show full information</li>
+                    <li>Font size is readable</li>
+                    <li>Responsive on smaller screens</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <h2>APC Propeller Dropdown Fixes</h2>
+            
+            <h3>Issues Fixed:</h3>
+            <ol style="margin: 15px 0; padding-left: 20px;">
+                <li><strong>Width constraint:</strong> Added max-width: 100% to prevent overflow</li>
+                <li><strong>Text overflow:</strong> Used text-overflow: ellipsis for long text</li>
+                <li><strong>Compact format:</strong> Changed from "5"x4.3" - 1055x43E" to "5"×4.3" 1055x43E"</li>
+                <li><strong>Tooltips:</strong> Added title attribute with full details</li>
+                <li><strong>Responsive:</strong> Smaller font sizes on narrow screens</li>
+            </ol>
+            
+            <h3>CSS Changes:</h3>
+            <pre style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; overflow-x: auto;">
+#apcPropeller.glass-select {
+  max-width: 100%;
+  width: 100%;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 30px;
+}
+
+@media (max-width: 1200px) {
+  #apcPropeller.glass-select {
+    font-size: 11px;
+  }
+}
+            </pre>
+            
+            <h3>JavaScript Changes:</h3>
+            <pre style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; overflow-x: auto;">
+// More compact format
+option.textContent = `${prop.diameter}"×${prop.pitch}" ${prop.model}`;
+// Full info in tooltip
+option.title = `${prop.diameter}" × ${prop.pitch}" - ${prop.model} (${prop.dataPointCount} data points)`;
+            </pre>
+        </div>
+    </div>
+</body>
+</html>

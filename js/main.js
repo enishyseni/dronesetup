@@ -448,7 +448,9 @@ document.addEventListener('DOMContentLoaded', function() {
             propellers.forEach(prop => {
                 const option = document.createElement('option');
                 option.value = prop.model;
-                option.textContent = `${prop.diameter}"x${prop.pitch}" - ${prop.model}`;
+                // More compact format for better sidebar fit
+                option.textContent = `${prop.diameter}"×${prop.pitch}" ${prop.model}`;
+                option.title = `${prop.diameter}" × ${prop.pitch}" - ${prop.model} (${prop.dataPointCount} data points)`; // Full info in tooltip
                 apcPropellerSelect.appendChild(option);
             });
             
