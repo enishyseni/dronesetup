@@ -386,7 +386,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     if (apcPropellerSelect) {
-        apcPropellerSelect.addEventListener('change', updateResults);
+        apcPropellerSelect.addEventListener('change', function() {
+            updateResults();
+        });
     }
     
     // APC Integration Functions

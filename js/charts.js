@@ -1075,12 +1075,19 @@ class DroneCharts {
         let propData;
         let dataSource = 'Estimated';
         
+        console.log('createPropEfficiencyChart called with config:', config);
+        console.log('APC enabled:', this.calculator.apcEnabled);
+        
         if (this.calculator.apcEnabled) {
             propData = this.analyzer.getAPCPropEfficiencyData(config);
             dataSource = 'APC Database';
+            console.log('Using APC data, points:', propData.length);
         } else {
             propData = this.analyzer.getPropEfficiencyData(config);
+            console.log('Using estimated data, points:', propData.length);
         }
+        
+        console.log('Propeller data:', propData);
         
         // Apply more robust decimal formatting
         const processedData = propData.map(d => ({
@@ -1164,37 +1171,64 @@ class DroneCharts {
     }
 
     updateCharts(config, primaryMetric) {
-        // Get comparison data for the selected metric
+        // Get comparison data for the selected metric (if specified)
         const data = this.calculator.getComparisonData(config, primaryMetric);
-        
-        if (!data) return;
         
         // Update charts on current tab
         const activeTabId = document.querySelector('.tab-content.active').id;
         
         switch (activeTabId) {
             case 'performance-tab':
-                this.createSpeedChart(data);
-                this.createFlightTimeChart(data);
-                this.createRangeChart(data);
-                this.createEfficiencyChart(data);
+                if (data) {
+                    this.createSpeedChart(data);
+                    this.createFlightTimeChart(data);
+                    this.createRangeChart(data);
+                    this.createEfficiencyChart(data);
+                } else {
+                    // Create charts with default battery comparison data when no primary metric specified
+                    const defaultData = this.calculator.getComparisonData(config, 'batteryType');
+                    if (defaultData) {
+                        this.createSpeedChart(defaultData);
+                        this.createFlightTimeChart(defaultData);
+                        this.createRangeChart(defaultData);
+                        this.createEfficiencyChart(defaultData);
+                    }
+                }
                 break;
                 
             case 'weight-tab':
                 this.createWeightDistributionChart(config);
-                this.createPayloadCapacityChart(data);
-                this.createWeightComparisonChart(data);
                 this.createComponentWeightChart(config);
+                if (data) {
+                    this.createPayloadCapacityChart(data);
+                    this.createWeightComparisonChart(data);
+                } else {
+                    const defaultData = this.calculator.getComparisonData(config, 'batteryType');
+                    if (defaultData) {
+                        this.createPayloadCapacityChart(defaultData);
+                        this.createWeightComparisonChart(defaultData);
+                    }
+                }
                 break;
                 
             case 'power-tab':
-                this.createCurrentDrawChart(data);
-                this.createPowerToWeightChart(data);
-                this.createBatteryDischargeChart(data);
                 this.createThermalEfficiencyChart(config);
+                if (data) {
+                    this.createCurrentDrawChart(data);
+                    this.createPowerToWeightChart(data);
+                    this.createBatteryDischargeChart(data);
+                } else {
+                    const defaultData = this.calculator.getComparisonData(config, 'batteryType');
+                    if (defaultData) {
+                        this.createCurrentDrawChart(defaultData);
+                        this.createPowerToWeightChart(defaultData);
+                        this.createBatteryDischargeChart(defaultData);
+                    }
+                }
                 break;
                 
             case 'advanced-tab':
+                // These charts depend only on config, not comparison data
                 this.createThrustCurveChart(config);
                 this.createEfficiencyMapChart(config);
                 this.createNoiseChart(config);

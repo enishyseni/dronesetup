@@ -658,18 +658,25 @@ class DroneCalculator {
     }
 
     getSelectedPropeller(config) {
-        const propSelectionMode = document.getElementById('propellerSelectionMode')?.value || 'auto';
+        if (!this.apcEnabled || !this.apcIntegration) {
+            return null;
+        }
+
+        // Check if manual propeller selection is enabled
+        const propSelectionMode = config.propellerType || document.getElementById('propellerType')?.value || 'auto';
         
         if (propSelectionMode === 'manual') {
-            const selectedProp = document.getElementById('apcPropellerSelect')?.value;
+            const selectedProp = config.apcPropeller || document.getElementById('apcPropeller')?.value;
             if (selectedProp && this.apcIntegration) {
-                return this.apcIntegration.database.findPropeller(selectedProp);
+                const found = this.apcIntegration.database.findPropeller(selectedProp);
+                return found;
             }
         }
         
         // Auto selection based on configuration
         if (this.apcIntegration && this.apcEnabled) {
-            return this.apcIntegration.selectOptimalPropeller(config);
+            const optimal = this.apcIntegration.selectOptimalPropeller(config);
+            return optimal;
         }
         
         return null;

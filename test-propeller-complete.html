@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Propeller Fix Validation</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background: #1a1a1a;
+        color: white;
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #333;
+        border-radius: 5px;
+      }
+      .pass {
+        border-color: green;
+        background: rgba(0, 255, 0, 0.1);
+      }
+      .fail {
+        border-color: red;
+        background: rgba(255, 0, 0, 0.1);
+      }
+      .controls {
+        background: #2a2a2a;
+        padding: 15px;
+        margin: 10px 0;
+        border-radius: 5px;
+      }
+      select,
+      button {
+        padding: 8px;
+        margin: 5px;
+        background: #333;
+        color: white;
+        border: 1px solid #555;
+        border-radius: 3px;
+      }
+      #log {
+        background: #000;
+        padding: 10px;
+        height: 200px;
+        overflow-y: auto;
+        font-family: monospace;
+        font-size: 12px;
+        border: 1px solid #333;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🔧 Propeller Change Fix Validation</h1>
+
+    <div class="test-section">
+      <h3>Test Controls</h3>
+      <div class="controls">
+        <label for="propellerType">Propeller Selection Mode:</label>
+        <select id="propellerType">
+          <option value="auto" selected>Auto (Best Match)</option>
+          <option value="manual">Manual APC Selection</option>
+        </select>
+
+        <div id="apcPropSelection" style="display: none; margin-top: 10px">
+          <label for="apcPropeller">APC Propeller:</label>
+          <select id="apcPropeller">
+            <option value="">Loading propellers...</option>
+          </select>
+        </div>
+
+        <button onclick="runPropellerTests()">🧪 Run All Tests</button>
+        <button onclick="simulateUserFlow()">👤 Simulate User Flow</button>
+      </div>
+    </div>
+
+    <div id="testResults"></div>
+
+    <div class="test-section">
+      <h3>Debug Log</h3>
+      <div id="log"></div>
+    </div>
+
+    <script src="js/calculations.js"></script>
+    <script src="js/apcIntegration.js"></script>
+    <script src="js/componentAnalysis.js"></script>
+    <script src="js/charts.js"></script>
+
+    <script>
+      let calculator,
+        charts,
+        testResults = {};
+
+      function log(message) {
+        const logDiv = document.getElementById("log");
+        const timestamp = new Date().toLocaleTimeString();
+        logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+        console.log(message);
+      }
+
+      function showTestResult(testName, passed, details) {
+        testResults[testName] = { passed, details };
+        updateTestDisplay();
+      }
+
+      function updateTestDisplay() {
+        const resultsDiv = document.getElementById("testResults");
+        resultsDiv.innerHTML = Object.entries(testResults)
+          .map(([name, result]) => {
+            const className = result.passed ? "pass" : "fail";
+            const icon = result.passed ? "✅" : "❌";
+            return `
+                    <div class="test-section ${className}">
+                        <h4>${icon} ${name}</h4>
+                        <p>${result.details}</p>
+                    </div>
+                `;
+          })
+          .join("");
+      }
+
+      async function initializeSystem() {
+        try {
+          log("🚀 Initializing system...");
+
+          // Initialize calculator
+          calculator = new DroneCalculator();
+
+          // Initialize APC integration
+          const apcSuccess = await calculator.initializeAPC();
+          log(`APC Integration: ${apcSuccess ? "SUCCESS" : "FAILED"}`);
+
+          // Initialize component analyzer
+          const analyzer = new ComponentAnalyzer(calculator);
+
+          // Initialize charts
+          charts = new DroneCharts(calculator, analyzer);
+
+          log("✅ System initialized successfully");
+          return true;
+        } catch (error) {
+          log(`❌ System initialization failed: ${error.message}`);
+          return false;
+        }
+      }
+
+      function createTestConfig() {
+        return {
+          batteryType: "lipo-4s",
+          batteryCapacity: "1500",
+          motorKv: "2400",
+          frameSize: "5inch",
+          propellerType: "auto",
+          apcPropeller: "",
+        };
+      }
+
+      async function testPropellerSelection() {
+        log("🔍 Testing propeller selection...");
+
+        const config = createTestConfig();
+
+        // Test auto selection
+        config.propellerType = "auto";
+        const autoProp = calculator.getSelectedPropeller(config);
+        const autoSuccess = autoProp !== null;
+        showTestResult(
+          "Auto Propeller Selection",
+          autoSuccess,
+          autoSuccess
+            ? `Found: ${autoProp?.model || "Unknown"}`
+            : "No propeller found"
+        );
+
+        // Test manual selection (if APC is available)
+        if (calculator.apcEnabled) {
+          const propellers =
+            calculator.apcIntegration.database.getAllPropellers();
+          if (propellers.length > 0) {
+            config.propellerType = "manual";
+            config.apcPropeller = propellers[0].model;
+            const manualProp = calculator.getSelectedPropeller(config);
+            const manualSuccess =
+              manualProp !== null && manualProp.model === propellers[0].model;
+            showTestResult(
+              "Manual Propeller Selection",
+              manualSuccess,
+              manualSuccess
+                ? `Selected: ${manualProp.model}`
+                : "Failed to select manual propeller"
+            );
+          }
+        }
+      }
+
+      async function testChartUpdates() {
+        log("📊 Testing chart updates...");
+
+        const config = createTestConfig();
+
+        // Create a test container for charts
+        const testContainer = document.createElement("div");
+        testContainer.innerHTML = `
+                <div class="tab-content active" id="advanced-tab">
+                    <canvas id="propEfficiencyChart"></canvas>
+                </div>
+            `;
+        document.body.appendChild(testContainer);
+
+        try {
+          // Test that updateCharts doesn't crash with null primaryMetric
+          charts.updateCharts(config, null);
+          showTestResult(
+            "Chart Update (null metric)",
+            true,
+            "updateCharts() completed without errors"
+          );
+
+          // Test with different propeller configs
+          config.propellerType = "manual";
+          if (calculator.apcEnabled) {
+            const propellers =
+              calculator.apcIntegration.database.getAllPropellers();
+            if (propellers.length > 1) {
+              config.apcPropeller = propellers[0].model;
+              charts.updateCharts(config, null);
+
+              config.apcPropeller = propellers[1].model;
+              charts.updateCharts(config, null);
+
+              showTestResult(
+                "Chart Update (propeller change)",
+                true,
+                "Charts updated with different propellers"
+              );
+            }
+          }
+        } catch (error) {
+          showTestResult(
+            "Chart Update (null metric)",
+            false,
+            `Error: ${error.message}`
+          );
+        } finally {
+          testContainer.remove();
+        }
+      }
+
+      async function testGetComparisonData() {
+        log("📈 Testing comparison data...");
+
+        const config = createTestConfig();
+
+        // Test that getComparisonData works with different metrics
+        const batteryData = calculator.getComparisonData(config, "batteryType");
+        const nullData = calculator.getComparisonData(config, null);
+
+        showTestResult(
+          "Comparison Data (valid metric)",
+          batteryData !== null,
+          batteryData ? "Battery comparison data generated" : "No data returned"
+        );
+
+        showTestResult(
+          "Comparison Data (null metric)",
+          nullData === null,
+          "Correctly returns null for null metric"
+        );
+      }
+
+      async function runPropellerTests() {
+        log("🧪 Starting comprehensive propeller tests...");
+        testResults = {};
+
+        const systemReady = await initializeSystem();
+        if (!systemReady) {
+          showTestResult(
+            "System Initialization",
+            false,
+            "Failed to initialize system"
+          );
+          return;
+        }
+
+        showTestResult(
+          "System Initialization",
+          true,
+          "All components initialized successfully"
+        );
+
+        await testPropellerSelection();
+        await testGetComparisonData();
+        await testChartUpdates();
+
+        log("✅ All tests completed");
+      }
+
+      async function simulateUserFlow() {
+        log("👤 Simulating user workflow...");
+
+        const systemReady = await initializeSystem();
+        if (!systemReady) {
+          log("❌ Cannot run user simulation - system not ready");
+          return;
+        }
+
+        // Simulate user changing propeller type
+        const propellerTypeSelect = document.getElementById("propellerType");
+        const apcPropSelection = document.getElementById("apcPropSelection");
+
+        log("1️⃣ User switches to manual propeller selection...");
+        propellerTypeSelect.value = "manual";
+        apcPropSelection.style.display = "block";
+
+        // Populate propeller list
+        if (calculator.apcEnabled) {
+          const apcPropellerSelect = document.getElementById("apcPropeller");
+          const propellers =
+            calculator.apcIntegration.database.getAllPropellers();
+          apcPropellerSelect.innerHTML =
+            '<option value="">Select Propeller...</option>';
+          propellers.slice(0, 5).forEach((prop) => {
+            const option = document.createElement("option");
+            option.value = prop.model;
+            option.textContent = `${prop.diameter}"×${prop.pitch}" ${prop.model}`;
+            apcPropellerSelect.appendChild(option);
+          });
+          log(`📋 Loaded ${propellers.length} propellers in dropdown`);
+
+          // Simulate user selecting a propeller
+          if (propellers.length > 0) {
+            apcPropellerSelect.value = propellers[0].model;
+            log(`2️⃣ User selects propeller: ${propellers[0].model}`);
+
+            // Test that this selection works
+            const config = createTestConfig();
+            config.propellerType = "manual";
+            config.apcPropeller = propellers[0].model;
+
+            const selectedProp = calculator.getSelectedPropeller(config);
+            if (selectedProp && selectedProp.model === propellers[0].model) {
+              log("✅ Propeller selection working correctly");
+
+              // Test chart update
+              try {
+                charts.updateCharts(config, null);
+                log("✅ Charts updated successfully with new propeller");
+              } catch (error) {
+                log(`❌ Chart update failed: ${error.message}`);
+              }
+            } else {
+              log("❌ Propeller selection not working");
+            }
+          }
+        }
+
+        log("🎯 User simulation completed");
+      }
+
+      // Initialize when page loads
+      document.addEventListener("DOMContentLoaded", function () {
+        log("🌟 Propeller Fix Validation Ready");
+        log('Click "Run All Tests" to validate the fix');
+
+        // Set up propeller type change handler
+        document
+          .getElementById("propellerType")
+          .addEventListener("change", function () {
+            const apcPropSelection =
+              document.getElementById("apcPropSelection");
+            apcPropSelection.style.display =
+              this.value === "manual" ? "block" : "none";
+          });
+      });
+    </script>
+  </body>
+</html>
