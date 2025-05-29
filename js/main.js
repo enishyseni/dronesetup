@@ -152,6 +152,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (document.querySelector('.advanced-metrics')) {
                 updateAdvancedMetrics(config);
             }
+            
+            // Update charts with current configuration
+            // This ensures that APC propeller changes are reflected in the charts
+            if (droneCharts && droneCharts.updateCharts) {
+                droneCharts.updateCharts(config, null);
+            }
         } catch (error) {
             console.error('Error updating results:', error);
             showUserError('Error calculating results. Please check your configuration.');
