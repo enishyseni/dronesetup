@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final TypeError Verification - COMPLETE TEST</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .result {
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border-left: 4px solid #ffc107;
+        }
+        .code-snippet {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+        .chart-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .chart-box {
+            flex: 1;
+            min-width: 300px;
+            height: 300px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 TypeError Fix Verification - COMPLETE TEST</h1>
+    <p><strong>Original Error:</strong> <code>TypeError: this.analyzer.getAPCThrustCurveData is not a function</code></p>
+    <p><strong>Error Location:</strong> charts.js line 878 & 1082</p>
+    
+    <div class="test-section">
+        <h2>🚨 Original Error Recreation Test</h2>
+        <p>Testing the exact code paths that were causing the TypeError...</p>
+        <div id="error-recreation-tests"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>✅ Method Existence Verification</h2>
+        <p>Verifying all 4 APC methods exist and are callable...</p>
+        <div id="method-existence-tests"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📊 Chart Generation Test</h2>
+        <p>Testing actual chart creation (the original failure point)...</p>
+        <div id="chart-generation-tests"></div>
+        <div class="chart-container">
+            <canvas id="testThrustChart" class="chart-box"></canvas>
+            <canvas id="testEfficiencyChart" class="chart-box"></canvas>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🔄 Fallback Mechanism Test</h2>
+        <p>Testing graceful fallback when APC data is unavailable...</p>
+        <div id="fallback-tests"></div>
+    </div>
+
+    <!-- Include Chart.js for chart testing -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Include application scripts in correct order -->
+    <script src="js/calculations.js"></script>
+    <script src="js/componentAnalysis.js"></script>
+    <script src="js/apcIntegration.js"></script>
+    <script src="js/charts.js"></script>
+    
+    <script>
+        // Utility function to add test results
+        function addResult(containerId, message, type = 'info') {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = message;
+            container.appendChild(div);
+        }
+
+        // Test 1: Recreate the exact original error scenario
+        function testOriginalErrorRecreation() {
+            addResult('error-recreation-tests', '<strong>🔍 Recreating Original Error Scenario</strong>', 'info');
+            
+            try {
+                // This is the exact setup that was causing the error
+                const calculator = new DroneCalculator();
+                const analyzer = new ComponentAnalyzer(calculator);
+                
+                // Enable APC to trigger the problematic code paths
+                calculator.apcEnabled = true;
+                
+                const config = {
+                    propDiameter: 10,
+                    propPitch: 4.5,
+                    motorKv: 1000,
+                    voltage: 11.1,
+                    frameSize: "5inch",
+                    batteryType: "lipo-4s"
+                };
+                
+                addResult('error-recreation-tests', '✓ Setup complete - APC enabled, config prepared', 'success');
+                
+                // THE EXACT LINE THAT WAS FAILING - Line 878
+                addResult('error-recreation-tests', '<div class="code-snippet">LINE 878: thrustData = this.analyzer.getAPCThrustCurveData(config);</div>', 'info');
+                
+                try {
+                    const thrustData = analyzer.getAPCThrustCurveData(config);
+                    if (thrustData && Array.isArray(thrustData) && thrustData.length > 0) {
+                        addResult('error-recreation-tests', `🎉 <strong>LINE 878 FIXED!</strong> getAPCThrustCurveData() returned ${thrustData.length} data points`, 'success');
+                        addResult('error-recreation-tests', `📊 Sample data: ${thrustData[5]?.thrust || thrustData[0]?.thrust}g at ${thrustData[5]?.throttle || thrustData[0]?.throttle}% throttle`, 'info');
+                    } else {
+                        addResult('error-recreation-tests', '⚠️ Method exists but returned no data', 'warning');
+                    }
+                } catch (error) {
+                    addResult('error-recreation-tests', `❌ <strong>LINE 878 STILL BROKEN:</strong> ${error.message}`, 'error');
+                    addResult('error-recreation-tests', `Error stack: ${error.stack}`, 'error');
+                }
+                
+                // THE EXACT LINE THAT WAS FAILING - Line 1082  
+                addResult('error-recreation-tests', '<div class="code-snippet">LINE 1082: propData = this.analyzer.getAPCPropEfficiencyData(config);</div>', 'info');
+                
+                try {
+                    const propData = analyzer.getAPCPropEfficiencyData(config);
+                    if (propData && Array.isArray(propData) && propData.length > 0) {
+                        addResult('error-recreation-tests', `🎉 <strong>LINE 1082 FIXED!</strong> getAPCPropEfficiencyData() returned ${propData.length} data points`, 'success');
+                        addResult('error-recreation-tests', `📊 Sample data: ${propData[5]?.efficiency || propData[0]?.efficiency}% efficiency at ${propData[5]?.rpm || propData[0]?.rpm} RPM`, 'info');
+                    } else {
+                        addResult('error-recreation-tests', '⚠️ Method exists but returned no data', 'warning');
+                    }
+                } catch (error) {
+                    addResult('error-recreation-tests', `❌ <strong>LINE 1082 STILL BROKEN:</strong> ${error.message}`, 'error');
+                    addResult('error-recreation-tests', `Error stack: ${error.stack}`, 'error');
+                }
+                
+            } catch (error) {
+                addResult('error-recreation-tests', `❌ Setup failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Test 2: Verify all methods exist and are callable
+        function testMethodExistence() {
+            addResult('method-existence-tests', '<strong>🔍 Testing All APC Methods</strong>', 'info');
+            
+            try {
+                const calculator = new DroneCalculator();
+                const analyzer = new ComponentAnalyzer(calculator);
+                
+                const methods = [
+                    'getAPCThrustCurveData',
+                    'getAPCPropEfficiencyData', 
+                    'getAPCPropellerAnalysis',
+                    'getAPCRecommendations'
+                ];
+                
+                const config = {
+                    propDiameter: 10,
+                    propPitch: 4.5,
+                    motorKv: 1000,
+                    voltage: 11.1,
+                    frameSize: "5inch",
+                    batteryType: "lipo-4s"
+                };
+                
+                methods.forEach((methodName, index) => {
+                    try {
+                        addResult('method-existence-tests', `<div class="code-snippet">Testing: analyzer.${methodName}(config)</div>`, 'info');
+                        
+                        if (typeof analyzer[methodName] === 'function') {
+                            const result = analyzer[methodName](config);
+                            
+                            if (result !== undefined && result !== null) {
+                                const resultType = Array.isArray(result) ? `array with ${result.length} items` : typeof result;
+                                addResult('method-existence-tests', `✅ ${methodName}: EXISTS and WORKS (returned ${resultType})`, 'success');
+                            } else {
+                                addResult('method-existence-tests', `⚠️ ${methodName}: EXISTS but returned ${result}`, 'warning');
+                            }
+                        } else {
+                            addResult('method-existence-tests', `❌ ${methodName}: DOES NOT EXIST or is not a function`, 'error');
+                        }
+                    } catch (error) {
+                        addResult('method-existence-tests', `❌ ${methodName}: ERROR - ${error.message}`, 'error');
+                    }
+                });
+                
+            } catch (error) {
+                addResult('method-existence-tests', `❌ Test setup failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Test 3: Test actual chart generation (the real-world scenario)
+        function testChartGeneration() {
+            addResult('chart-generation-tests', '<strong>📊 Testing Chart Generation (Real-World Scenario)</strong>', 'info');
+            
+            try {
+                // Create the exact setup that would be used in the app
+                const calculator = new DroneCalculator();
+                calculator.apcEnabled = true;
+                
+                const chartManager = new ChartManager();
+                chartManager.calculator = calculator;
+                chartManager.analyzer = new ComponentAnalyzer(calculator);
+                
+                addResult('chart-generation-tests', '✓ ChartManager, Calculator, and Analyzer created', 'success');
+                
+                const config = {
+                    propDiameter: 10,
+                    propPitch: 4.5,
+                    motorKv: 1000,
+                    voltage: 11.1,
+                    frameSize: "5inch",
+                    batteryType: "lipo-4s"
+                };
+                
+                // Test thrust curve chart creation (Line 878 pathway)
+                addResult('chart-generation-tests', '<div class="code-snippet">chartManager.createThrustCurveChart("testThrustChart", config)</div>', 'info');
+                
+                try {
+                    chartManager.createThrustCurveChart('testThrustChart', config);
+                    addResult('chart-generation-tests', '🎉 <strong>THRUST CHART CREATED SUCCESSFULLY!</strong> (Line 878 pathway)', 'success');
+                } catch (error) {
+                    addResult('chart-generation-tests', `❌ Thrust chart creation failed: ${error.message}`, 'error');
+                }
+                
+                // Test efficiency chart creation (Line 1082 pathway)
+                addResult('chart-generation-tests', '<div class="code-snippet">chartManager.createPropEfficiencyChart("testEfficiencyChart", config)</div>', 'info');
+                
+                try {
+                    chartManager.createPropEfficiencyChart('testEfficiencyChart', config);
+                    addResult('chart-generation-tests', '🎉 <strong>EFFICIENCY CHART CREATED SUCCESSFULLY!</strong> (Line 1082 pathway)', 'success');
+                } catch (error) {
+                    addResult('chart-generation-tests', `❌ Efficiency chart creation failed: ${error.message}`, 'error');
+                }
+                
+            } catch (error) {
+                addResult('chart-generation-tests', `❌ Chart generation test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Test 4: Test fallback mechanisms
+        function testFallbackMechanisms() {
+            addResult('fallback-tests', '<strong>🔄 Testing Fallback Mechanisms</strong>', 'info');
+            
+            try {
+                // Test with APC disabled
+                const calculator = new DroneCalculator();
+                calculator.apcEnabled = false; // Disable APC
+                
+                const analyzer = new ComponentAnalyzer(calculator);
+                
+                const config = {
+                    frameSize: "5inch",
+                    motorKv: "2400",
+                    batteryType: "lipo-4s"
+                };
+                
+                addResult('fallback-tests', '🔧 Testing with APC disabled...', 'info');
+                
+                try {
+                    const thrustData = analyzer.getAPCThrustCurveData(config);
+                    if (thrustData && thrustData.length > 0) {
+                        addResult('fallback-tests', '✅ APC disabled: getAPCThrustCurveData() fell back to basic calculation', 'success');
+                    } else {
+                        addResult('fallback-tests', '❌ APC disabled: No fallback data returned', 'error');
+                    }
+                } catch (error) {
+                    addResult('fallback-tests', `❌ APC disabled fallback failed: ${error.message}`, 'error');
+                }
+                
+                // Test with no APC integration
+                addResult('fallback-tests', '🔧 Testing with no APC integration...', 'info');
+                
+                const calculatorNoAPC = new DroneCalculator();
+                calculatorNoAPC.apcIntegration = null; // Simulate no APC integration
+                
+                const analyzerNoAPC = new ComponentAnalyzer(calculatorNoAPC);
+                
+                try {
+                    const thrustData = analyzerNoAPC.getAPCThrustCurveData(config);
+                    if (thrustData && thrustData.length > 0) {
+                        addResult('fallback-tests', '✅ No APC integration: Graceful fallback to basic calculation', 'success');
+                    } else {
+                        addResult('fallback-tests', '❌ No APC integration: Fallback failed', 'error');
+                    }
+                } catch (error) {
+                    addResult('fallback-tests', `❌ No APC integration test failed: ${error.message}`, 'error');
+                }
+                
+            } catch (error) {
+                addResult('fallback-tests', `❌ Fallback test setup failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // Run all tests
+        function runAllTests() {
+            addResult('error-recreation-tests', '🚀 Starting TypeError Fix Verification Tests...', 'info');
+            
+            // Run tests in sequence with delays for better visibility
+            setTimeout(() => {
+                testOriginalErrorRecreation();
+                setTimeout(() => {
+                    testMethodExistence();
+                    setTimeout(() => {
+                        testChartGeneration();
+                        setTimeout(() => {
+                            testFallbackMechanisms();
+                            
+                            // Final summary
+                            setTimeout(() => {
+                                addResult('error-recreation-tests', '🎯 <strong>ALL TESTS COMPLETED!</strong>', 'success');
+                                addResult('error-recreation-tests', 'If you see green success messages above, the TypeError has been successfully fixed! 🎉', 'info');
+                            }, 500);
+                        }, 500);
+                    }, 500);
+                }, 500);
+            }, 500);
+        }
+        
+        // Start tests when page loads
+        window.addEventListener('load', runAllTests);
+    </script>
+</body>
+</html>

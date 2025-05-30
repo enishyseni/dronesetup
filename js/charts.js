@@ -324,10 +324,10 @@ class DroneCharts {
             this.charts.efficiencyChart.destroy();
         }
         
-        // Ensure exactly 1 decimal precision for all data points
+        // Ensure exactly 2 decimal precision for all data points
         const efficiencyData = data.map(d => ({
             option: d.option,
-            current: Number(Number(d.current).toFixed(1))
+            current: Number(Number(d.current).toFixed(2))
         }));
         
         this.charts.efficiencyChart = new Chart(ctx, {
@@ -361,7 +361,7 @@ class DroneCharts {
                     tooltip: {
                         callbacks: {
                             label: (context) => {
-                                return `Current Draw: ${context.raw.toFixed(1)}A`;
+                                return `Current Draw: ${context.raw.toFixed(2)}A`;
                             }
                         }
                     }
@@ -374,7 +374,7 @@ class DroneCharts {
                             text: 'Current (A)'
                         },
                         ticks: {
-                            callback: (value) => value.toFixed(1) // Fix decimal precision
+                            callback: (value) => value.toFixed(2) // Fix decimal precision
                         }
                     }
                 }
@@ -446,7 +446,7 @@ class DroneCharts {
                     datalabels: {
                         formatter: (value, ctx) => {
                             const totalWeight = values.reduce((a, b) => a + b, 0);
-                            const percentage = Math.round((value / totalWeight) * 100);
+                            const percentage = parseFloat(((value / totalWeight) * 100).toFixed(2));
                             return percentage >= 5 ? `${percentage}%` : '';
                         },
                         color: '#fff',
@@ -658,7 +658,7 @@ class DroneCharts {
                 labels: data.map(d => this.formatLabel(d.option)),
                 datasets: [{
                     label: 'Current Draw (A)',
-                    data: data.map(d => Number(Number(d.current).toFixed(1))), // Fix decimal precision
+                    data: data.map(d => Number(Number(d.current).toFixed(2))), // Fix decimal precision
                     backgroundColor: this.colorPalette[3],
                     borderWidth: 1
                 }]
@@ -701,8 +701,8 @@ class DroneCharts {
                 { ...this.getCurrentConfig(), [Object.keys(data[0].option)[0]]: d.option },
                 d.weight
             );
-            // Make sure we only get the numeric part and parse it as a float with 1 decimal precision
-            return parseFloat(parseFloat(pwrStr.split(':')[0]).toFixed(1));
+            // Make sure we only get the numeric part and parse it as a float with 2 decimal precision
+            return parseFloat(parseFloat(pwrStr.split(':')[0]).toFixed(2));
         });
         
         this.charts.powerToWeightChart = new Chart(ctx, {
@@ -729,7 +729,7 @@ class DroneCharts {
                     tooltip: {
                         callbacks: {
                             label: (context) => {
-                                return `${context.raw.toFixed(1)}:1`;
+                                return `${context.raw.toFixed(2)}:1`;
                             }
                         }
                     }
@@ -992,7 +992,7 @@ class DroneCharts {
                         ticks: {
                             callback: function(value) {
                                 // Ensure consistent decimal formatting in the efficiency map
-                                return Number(value * 100).toFixed(1) + '%';
+                                return Number(value * 100).toFixed(2) + '%';
                             }
                         }
                     },
@@ -1092,7 +1092,7 @@ class DroneCharts {
         // Apply more robust decimal formatting
         const processedData = propData.map(d => ({
             rpmFactor: d.rpmFactor,
-            efficiency: Number(Number(d.efficiency).toFixed(1)),
+            efficiency: Number(Number(d.efficiency).toFixed(2)),
             thrust: d.thrust || 0,
             power: d.power || 0
         }));
@@ -1134,7 +1134,7 @@ class DroneCharts {
                         ticks: {
                             callback: function(value) {
                                 // Ensure consistent decimal formatting in axis labels
-                                return Number(value * 100).toFixed(1) + '%';
+                                return Number(value * 100).toFixed(2) + '%';
                             }
                         }
                     },

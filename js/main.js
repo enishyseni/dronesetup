@@ -187,30 +187,30 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateAdvancedMetrics(config) {
         // Calculate motor RPM
         const rpm = calculator.calculateMotorRPM(config);
-        safelyUpdateElementText('motorRPM', `${Math.round(rpm)} RPM`);
+        safelyUpdateElementText('motorRPM', `${rpm.toFixed(2)} RPM`);
         
         // Calculate thrust
         const thrust = calculator.calculateThrust(config);
-        safelyUpdateElementText('motorThrust', `${Math.round(thrust)}g`);
+        safelyUpdateElementText('motorThrust', `${thrust.toFixed(2)}g`);
         
         // Calculate motor efficiency
         const efficiency = calculator.calculateMotorEfficiency(config);
-        safelyUpdateElementText('motorEfficiency', `${Math.round(efficiency)}%`);
+        safelyUpdateElementText('motorEfficiency', `${efficiency.toFixed(2)}%`);
         
         // Calculate recommended PID values
         const pids = calculator.calculateRecommendedPIDValues(config);
-        safelyUpdateElementText('recommendedP', Math.round(pids.P));
-        safelyUpdateElementText('recommendedI', Math.round(pids.I));
-        safelyUpdateElementText('recommendedD', Math.round(pids.D));
+        safelyUpdateElementText('recommendedP', pids.P.toFixed(2));
+        safelyUpdateElementText('recommendedI', pids.I.toFixed(2));
+        safelyUpdateElementText('recommendedD', pids.D.toFixed(2));
         
         // Get power system optimization data
         const powerSystem = componentAnalyzer.getPowerSystemOptimization(config);
-        safelyUpdateElementText('powerEfficiency', `${Math.round(powerSystem.efficiency)}%`);
-        safelyUpdateElementText('thermalRise', `${Math.round(powerSystem.thermalRise)}°C`);
+        safelyUpdateElementText('powerEfficiency', `${powerSystem.efficiency.toFixed(2)}%`);
+        safelyUpdateElementText('thermalRise', `${powerSystem.thermalRise.toFixed(2)}°C`);
         
         // Get frame geometry effects
         const frameGeometry = componentAnalyzer.getFrameGeometryEffects(config);
-        safelyUpdateElementText('frameFrequency', `${Math.round(frameGeometry.naturalFrequency)} Hz`);
+        safelyUpdateElementText('frameFrequency', `${frameGeometry.naturalFrequency.toFixed(2)} Hz`);
         safelyUpdateElementText('propwashResistance', frameGeometry.propwashResistance);
         
         // Get radio system analysis

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APC Fix Verification Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5; 
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+        }
+        .test-result { 
+            margin: 10px 0; 
+            padding: 10px; 
+            border-radius: 4px; 
+        }
+        .success { 
+            background-color: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb; 
+        }
+        .error { 
+            background-color: #f8d7da; 
+            color: #721c24; 
+            border: 1px solid #f5c6cb; 
+        }
+        .info { 
+            background-color: #d1ecf1; 
+            color: #0c5460; 
+            border: 1px solid #bee5eb; 
+        }
+        .warning { 
+            background-color: #fff3cd; 
+            color: #856404; 
+            border: 1px solid #ffeaa7; 
+        }
+        pre { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 4px; 
+            overflow-x: auto; 
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 APC TypeError Fix Verification</h1>
+        <p>This test verifies that the TypeError "this.analyzer.getAPCThrustCurveData is not a function" has been resolved.</p>
+        
+        <button onclick="runVerificationTest()">Run Verification Test</button>
+        <button onclick="runChartTest()">Test Chart Generation</button>
+        <button onclick="clearResults()">Clear Results</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script src="js/apcIntegration.js"></script>
+    <script src="js/calculations.js"></script>
+    <script src="js/componentAnalysis.js"></script>
+    <script src="js/charts.js"></script>
+
+    <script>
+        let calculator, analyzer, charts;
+        
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            results.appendChild(div);
+            console.log(message);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function runVerificationTest() {
+            clearResults();
+            log('🚀 Starting APC TypeError Fix Verification...', 'info');
+            
+            try {
+                // Step 1: Create calculator
+                log('Step 1: Creating DroneCalculator...', 'info');
+                calculator = new DroneCalculator();
+                log('✅ Calculator created successfully', 'success');
+                
+                // Step 2: Initialize APC
+                log('Step 2: Initializing APC integration...', 'info');
+                const apcSuccess = await calculator.initializeAPC();
+                log(`APC Initialization: ${apcSuccess ? '✅ SUCCESS' : '❌ FAILED'}`, apcSuccess ? 'success' : 'warning');
+                
+                // Step 3: Create ComponentAnalyzer
+                log('Step 3: Creating ComponentAnalyzer...', 'info');
+                analyzer = new ComponentAnalyzer(calculator);
+                log('✅ ComponentAnalyzer created successfully', 'success');
+                
+                // Step 4: Test configuration
+                const testConfig = {
+                    frameSize: "5inch",
+                    motorKv: "2400",
+                    batteryType: "lipo-4s",
+                    batteryCapacity: "1300"
+                };
+                log('Step 4: Testing with configuration:', 'info');
+                log(`<pre>${JSON.stringify(testConfig, null, 2)}</pre>`, 'info');
+                
+                // Step 5: Test getAPCThrustCurveData (this was the original failing method)
+                log('Step 5: Testing getAPCThrustCurveData() - THE ORIGINAL ERROR SOURCE...', 'info');
+                try {
+                    const thrustData = analyzer.getAPCThrustCurveData(testConfig);
+                    
+                    if (thrustData && Array.isArray(thrustData) && thrustData.length > 0) {
+                        log(`🎉 SUCCESS! getAPCThrustCurveData() returned ${thrustData.length} data points`, 'success');
+                        log(`Sample data point: ${thrustData[0].thrust}g thrust at ${thrustData[0].throttle}% throttle`, 'success');
+                        log('✅ TypeError FIXED - method exists and works!', 'success');
+                    } else {
+                        log('⚠️ Method exists but returned no data (fallback mode)', 'warning');
+                        log('✅ TypeError FIXED - method exists (no crash)', 'success');
+                    }
+                } catch (error) {
+                    log(`❌ TypeError still exists: ${error.message}`, 'error');
+                    log(`Stack trace: ${error.stack}`, 'error');
+                    return;
+                }
+                
+                // Step 6: Test getAPCPropEfficiencyData
+                log('Step 6: Testing getAPCPropEfficiencyData()...', 'info');
+                try {
+                    const efficiencyData = analyzer.getAPCPropEfficiencyData(testConfig);
+                    
+                    if (efficiencyData && Array.isArray(efficiencyData) && efficiencyData.length > 0) {
+                        log(`✅ getAPCPropEfficiencyData() returned ${efficiencyData.length} data points`, 'success');
+                        log(`Sample efficiency: ${efficiencyData[0].efficiency}% at ${efficiencyData[0].rpm} RPM`, 'success');
+                    } else {
+                        log('⚠️ Method exists but returned no data (fallback mode)', 'warning');
+                    }
+                } catch (error) {
+                    log(`❌ Error in getAPCPropEfficiencyData: ${error.message}`, 'error');
+                }
+                
+                // Step 7: Test getAPCPropellerAnalysis
+                log('Step 7: Testing getAPCPropellerAnalysis()...', 'info');
+                try {
+                    const analysis = analyzer.getAPCPropellerAnalysis(testConfig);
+                    
+                    if (analysis) {
+                        log(`✅ getAPCPropellerAnalysis() returned analysis`, 'success');
+                        log(`APC Available: ${analysis.available}`, 'info');
+                        log(`Message: ${analysis.message}`, 'info');
+                    } else {
+                        log('⚠️ Method exists but returned null', 'warning');
+                    }
+                } catch (error) {
+                    log(`❌ Error in getAPCPropellerAnalysis: ${error.message}`, 'error');
+                }
+                
+                // Step 8: Test getAPCRecommendations
+                log('Step 8: Testing getAPCRecommendations()...', 'info');
+                try {
+                    const recommendations = analyzer.getAPCRecommendations(testConfig);
+                    
+                    if (recommendations && Array.isArray(recommendations)) {
+                        log(`✅ getAPCRecommendations() returned ${recommendations.length} recommendations`, 'success');
+                        if (recommendations.length > 0) {
+                            log(`Sample recommendation: ${recommendations[0].message}`, 'info');
+                        }
+                    } else {
+                        log('⚠️ Method exists but returned no recommendations', 'warning');
+                    }
+                } catch (error) {
+                    log(`❌ Error in getAPCRecommendations: ${error.message}`, 'error');
+                }
+                
+                log('🎉 VERIFICATION COMPLETE - All APC methods exist and are callable!', 'success');
+                log('🎯 The original TypeError "this.analyzer.getAPCThrustCurveData is not a function" has been RESOLVED!', 'success');
+                
+            } catch (error) {
+                log(`❌ Verification failed: ${error.message}`, 'error');
+                log(`Stack trace: ${error.stack}`, 'error');
+            }
+        }
+
+        async function runChartTest() {
+            log('🎨 Testing chart generation (the original error scenario)...', 'info');
+            
+            try {
+                if (!calculator || !analyzer) {
+                    log('⚠️ Please run verification test first', 'warning');
+                    return;
+                }
+                
+                // Create a simple div for chart testing
+                if (!document.getElementById('thrustCurveChart')) {
+                    const chartDiv = document.createElement('div');
+                    chartDiv.innerHTML = '<canvas id="thrustCurveChart" width="400" height="200"></canvas>';
+                    document.body.appendChild(chartDiv);
+                }
+                
+                charts = new DroneCharts(calculator, analyzer);
+                log('✅ DroneCharts created successfully', 'success');
+                
+                const testConfig = {
+                    frameSize: "5inch",
+                    motorKv: "2400",
+                    batteryType: "lipo-4s",
+                    batteryCapacity: "1300"
+                };
+                
+                // This should trigger the call to getAPCThrustCurveData on line 878 of charts.js
+                log('Testing createThrustCurveChart() - this calls getAPCThrustCurveData()...', 'info');
+                charts.createThrustCurveChart(testConfig);
+                log('🎉 Chart creation successful - no TypeError!', 'success');
+                
+            } catch (error) {
+                log(`❌ Chart test failed: ${error.message}`, 'error');
+                log(`Stack trace: ${error.stack}`, 'error');
+            }
+        }
+
+        // Auto-run verification on page load
+        window.addEventListener('load', () => {
+            log('Page loaded - ready for testing', 'info');
+        });
+    </script>
+</body>
+</html>

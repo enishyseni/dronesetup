@@ -249,7 +249,7 @@ class DroneCalculator {
         // Add a minimum realistic flight time
         // Using safety bounds
         const boundedTime = Math.max(Math.min(calculatedTime, 60), 2); // Between 2-60 minutes
-        return Math.round(boundedTime);
+        return parseFloat(boundedTime.toFixed(2));
     }
 
     calculatePayloadCapacity(config, totalWeight) {
@@ -294,7 +294,7 @@ class DroneCalculator {
         }
         
         // Payload capacity is max takeoff weight minus the drone's weight
-        return Math.max(0, Math.round(maxTakeoffWeight - totalWeight));
+        return parseFloat(Math.max(0, maxTakeoffWeight - totalWeight).toFixed(2));
     }
 
     calculateMaxSpeed(config) {
@@ -313,7 +313,7 @@ class DroneCalculator {
             const frameFactor = Math.sqrt(frameSize / 5);
             
             // Calculate rough max speed in km/h
-            return Math.round(kvFactor * cellCount * 20 * frameFactor * powerFactor);
+            return parseFloat((kvFactor * cellCount * 20 * frameFactor * powerFactor).toFixed(2));
         } else {
             const wingspan = parseInt(config.wingspan);
             const wingType = config.wingType;
@@ -331,7 +331,7 @@ class DroneCalculator {
             // Motor contribution
             const kvFactor = parseInt(config.motorKv) / 2000;
             
-            return Math.round(baseSpeed * sizeFactor * kvFactor * cellCount * powerFactor);
+            return parseFloat((baseSpeed * sizeFactor * kvFactor * cellCount * powerFactor).toFixed(2));
         }
     }
 
@@ -375,8 +375,8 @@ class DroneCalculator {
         // Calculate power to weight ratio (W/kg)
         const ratio = power / weightKg;
         
-        // Return a simplified ratio for display with 1 decimal place
-        return (ratio / 100).toFixed(1) + ":1";
+        // Return a simplified ratio for display with 2 decimal places
+        return (ratio / 100).toFixed(2) + ":1";
     }
 
     calculateRange(config) {
@@ -414,7 +414,7 @@ class DroneCalculator {
         const signalRange = baseRange * powerFactor * systemFactor * aircraftFactor;
         
         // The actual range is limited by the shorter of the two factors
-        return Math.round(Math.min(timeBasedRange, signalRange));
+        return parseFloat(Math.min(timeBasedRange, signalRange).toFixed(2));
     }
 
     calculateBatteryDischargeRate(config, totalWeight) {
@@ -497,7 +497,7 @@ class DroneCalculator {
             hoverCurrent = (totalWeight / 1000) * 9.8 / (voltage * 1.5 * wingspan * efficiencyFactor);
         }
         
-        return parseFloat(hoverCurrent.toFixed(1));
+        return parseFloat(hoverCurrent.toFixed(2));
     }
 
     /**
@@ -767,13 +767,13 @@ class DroneCalculator {
                     // Ensure numeric precision
                     results.push({
                         option: option,
-                        flightTime: Math.round(flightTime),
-                        maxSpeed: Math.round(this.calculateMaxSpeed(tempConfig)),
-                        weight: Math.round(weight),
-                        payload: Math.round(this.calculatePayloadCapacity(tempConfig, weight)),
-                        range: Math.round(this.calculateRange(tempConfig)),
-                        current: parseFloat(hoverCurrent.toFixed(1)),
-                        efficiency: parseFloat((weight / flightTime).toFixed(1))
+                        flightTime: parseFloat(flightTime.toFixed(2)),
+                        maxSpeed: parseFloat(this.calculateMaxSpeed(tempConfig).toFixed(2)),
+                        weight: parseFloat(weight.toFixed(2)),
+                        payload: parseFloat(this.calculatePayloadCapacity(tempConfig, weight).toFixed(2)),
+                        range: parseFloat(this.calculateRange(tempConfig).toFixed(2)),
+                        current: parseFloat(hoverCurrent.toFixed(2)),
+                        efficiency: parseFloat((weight / flightTime).toFixed(2))
                     });
                 } catch (optionError) {
                     console.warn(`Error calculating for option ${option}:`, optionError);
@@ -796,8 +796,8 @@ class DroneCalculator {
             totalWeight = this.calculateFixedWingWeight(config);
         }
         
-        // Round totalWeight to a whole number
-        totalWeight = Math.round(totalWeight);
+        // Format totalWeight to 2 decimal places
+        totalWeight = parseFloat(totalWeight.toFixed(2));
         
         const flightTime = this.calculateFlightTime(config, totalWeight);
         const payloadCapacity = this.calculatePayloadCapacity(config, totalWeight);
@@ -808,14 +808,14 @@ class DroneCalculator {
         const hoverCurrent = this.calculateHoverCurrent(config, totalWeight);
         
         return {
-            totalWeight: totalWeight + 'g',
-            flightTime: flightTime + ' mins',
-            payloadCapacity: payloadCapacity + 'g',
-            maxSpeed: maxSpeed + ' km/h',
+            totalWeight: totalWeight.toFixed(2) + 'g',
+            flightTime: flightTime.toFixed(2) + ' mins',
+            payloadCapacity: payloadCapacity.toFixed(2) + 'g',
+            maxSpeed: maxSpeed.toFixed(2) + ' km/h',
             powerToWeight: powerToWeight,
-            range: range + ' m',
+            range: range.toFixed(2) + ' m',
             dischargeRate: dischargeRate,
-            hoverCurrent: hoverCurrent + ' A'
+            hoverCurrent: hoverCurrent.toFixed(2) + ' A'
         };
     }
 
@@ -857,7 +857,7 @@ class DroneCalculator {
         const thrust = thrustCoefficient * airDensity * Math.pow(rps, 2) * Math.pow(propDiameter, 4);
         
         // Return thrust in grams (1N ≈ 102g)
-        return thrust * 102;
+        return parseFloat((thrust * 102).toFixed(2));
     }
     
     /**
@@ -881,15 +881,15 @@ class DroneCalculator {
         
         // Calculate efficiency as percentage of optimal range
         if (kvRating < minKv) {
-            return 70 + (kvRating - minKv + 500) / 500 * 15; // Underpowered
+            return parseFloat((70 + (kvRating - minKv + 500) / 500 * 15).toFixed(2)); // Underpowered
         } else if (kvRating > maxKv) {
-            return 85 - (kvRating - maxKv) / 400 * 15; // Overpowered
+            return parseFloat((85 - (kvRating - maxKv) / 400 * 15).toFixed(2)); // Overpowered
         } else {
             // Within optimal range
             const rangeWidth = maxKv - minKv;
             const midpoint = minKv + rangeWidth / 2;
             const distanceFromMid = Math.abs(kvRating - midpoint);
-            return 95 - (distanceFromMid / (rangeWidth / 2)) * 10;
+            return parseFloat((95 - (distanceFromMid / (rangeWidth / 2)) * 10).toFixed(2));
         }
     }
     

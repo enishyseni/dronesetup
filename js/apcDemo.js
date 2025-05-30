@@ -93,9 +93,9 @@ class APCDemo {
                 const efficiency = this.calculator.getPropellerEfficiency(config);
                 
                 console.log(`📈 Performance Metrics:`);
-                console.log(`   • Thrust: ${apcThrust?.toFixed(1)} N`);
-                console.log(`   • Power: ${apcPower?.toFixed(1)} W`);
-                console.log(`   • Efficiency: ${efficiency?.toFixed(1)}%`);
+                console.log(`   • Thrust: ${apcThrust?.toFixed(2)} N`);
+                console.log(`   • Power: ${apcPower?.toFixed(2)} W`);
+                console.log(`   • Efficiency: ${efficiency?.toFixed(2)}%`);
                 
                 // Test available propellers
                 const availableProps = this.calculator.getAvailableAPCPropellers(config);
@@ -115,7 +115,7 @@ class APCDemo {
                     const maxThrust = Math.max(...perfData.thrust);
                     const maxEfficiency = Math.max(...perfData.efficiency);
                     console.log(`   • Max thrust: ${maxThrust.toFixed(2)} N`);
-                    console.log(`   • Max efficiency: ${(maxEfficiency * 100).toFixed(1)}%`);
+                    console.log(`   • Max efficiency: ${(maxEfficiency * 100).toFixed(2)}%`);
                 }
                 
             } else {
@@ -149,9 +149,9 @@ class APCDemo {
         if (envelope) {
             console.log('📈 Operating envelope:');
             console.log(`   • RPM: ${envelope.rpmRange[0]} - ${envelope.rpmRange[1]}`);
-            console.log(`   • Velocity: ${envelope.velocityRange[0].toFixed(1)} - ${envelope.velocityRange[1].toFixed(1)} m/s`);
+            console.log(`   • Velocity: ${envelope.velocityRange[0].toFixed(2)} - ${envelope.velocityRange[1].toFixed(2)} m/s`);
             console.log(`   • Thrust: ${envelope.thrustRange[0].toFixed(2)} - ${envelope.thrustRange[1].toFixed(2)} N`);
-            console.log(`   • Power: ${envelope.powerRange[0].toFixed(1)} - ${envelope.powerRange[1].toFixed(1)} W`);
+            console.log(`   • Power: ${envelope.powerRange[0].toFixed(2)} - ${envelope.powerRange[1].toFixed(2)} W`);
         }
         
         // Test interpolation at different operating points
@@ -169,8 +169,8 @@ class APCDemo {
             
             console.log(`   @ ${point.rpm} RPM, ${point.airspeed} m/s:`);
             console.log(`     Thrust: ${thrust?.toFixed(2)} N`);
-            console.log(`     Power: ${power?.toFixed(1)} W`);
-            console.log(`     Efficiency: ${(efficiency * 100)?.toFixed(1)}%`);
+            console.log(`     Power: ${power?.toFixed(2)} W`);
+            console.log(`     Efficiency: ${(efficiency * 100)?.toFixed(2)}%`);
         });
     }
 

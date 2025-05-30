@@ -387,7 +387,7 @@ class ComponentAnalyzer {
             const motorTemp = baseTemp + (kvTempIncrease * loadFactor * batteryTempFactor * cellTempFactor);
             return {
                 throttle: throttle,
-                temperature: Math.round(motorTemp)
+                temperature: parseFloat(motorTemp.toFixed(2))
             };
         });
     }
@@ -416,7 +416,7 @@ class ComponentAnalyzer {
             const noiseLevel = baseNoise * throttleFactor * kvNoiseFactor;
             return {
                 throttle: throttle,
-                noise: Math.round(noiseLevel)
+                noise: parseFloat(noiseLevel.toFixed(2))
             };
         });
     }
@@ -482,252 +482,7 @@ class ComponentAnalyzer {
             const thrust = baseThrust * thrustFactor;
             return {
                 throttle: throttle,
-                thrust: Math.round(thrust)
-            };
-        });
-    }
-    
-    /**
-     * Get APC-enhanced thrust curve data
-     */
-    getAPCThrustCurveData(config) {
-        if (!this.calculator.apcEnabled) {
-            return this.getThrustCurveData(config);
-        }
-
-        const apcData = this.calculator.generateAPCPerformanceData(config);
-        if (!apcData || !apcData.thrust || !Array.isArray(apcData.thrust) || apcData.thrust.length === 0) {
-            return this.getThrustCurveData(config);
-        }
-
-        // Convert APC data to chart format
-        const throttleLevels = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
-        return throttleLevels.map((throttle, index) => {
-            const dataIndex = Math.floor((index / 10) * (apcData.thrust.length - 1));
-            const thrust = apcData.thrust[dataIndex] || 0;
-            
-            return {
-                throttle,
-                thrust: thrust * 4, // 4 motors
-                thrustPerMotor: thrust,
-                efficiency: apcData.efficiency[dataIndex] || 0
-            };
-        });
-    }
-
-    /**
-     * Get APC-enhanced propeller efficiency data
-     */
-    getAPCPropEfficiencyData(config) {
-        if (!this.calculator.apcEnabled) {
-            return this.getPropEfficiencyData(config);
-        }
-
-        const apcData = this.calculator.generateAPCPerformanceData(config);
-        if (!apcData || !apcData.rpm || !Array.isArray(apcData.rpm) || apcData.rpm.length === 0) {
-            return this.getPropEfficiencyData(config);
-        }
-
-        // Format data for charts
-        return apcData.rpm.map((rpm, index) => ({
-            rpmFactor: (rpm / 1000).toFixed(1),
-            rpm: rpm.toFixed(0),
-            efficiency: ((apcData.efficiency[index] || 0) * 100).toFixed(2),
-            thrust: (apcData.thrust[index] || 0).toFixed(2),
-            power: (apcData.power[index] || 0).toFixed(2)
-        }));
-    }
-
-    /**
-     * Get detailed APC propeller analysis
-     */
-    getAPCPropellerAnalysis(config) {
-        if (!this.calculator.apcEnabled) {
-            return {
-                available: false,
-                message: 'APC Integration not available'
-            };
-        }
-
-        const selectedProp = this.calculator.getSelectedPropeller(config);
-        if (!selectedProp) {
-            return {
-                available: false,
-                message: 'No matching APC propeller found'
-            };
-        }
-
-        const thrust = this.calculator.calculateThrustWithAPC(config);
-        const power = this.calculator.calculatePowerWithAPC(config);
-        const efficiency = this.calculator.calculateMotorEfficiency(config);
-
-        return {
-            available: true,
-            propeller: selectedProp,
-            performance: {
-                thrust: thrust,
-                power: power,
-                efficiency: efficiency,
-                thrustToWeight: thrust / this.getTotalWeight(config)
-            },
-            recommendations: this.getAPCRecommendations(config, selectedProp)
-        };
-    }
-
-    /**
-     * Get APC-based recommendations
-     */
-    getAPCRecommendations(config, selectedProp) {
-        const recommendations = [];
-        
-        if (this.calculator.apcIntegration) {
-            const availableProps = this.calculator.apcIntegration.database.getPropellersByDiameter(
-                parseInt(config.frameSize) || 5
-            );
-            
-            if (availableProps.length > 1) {
-                recommendations.push(`${availableProps.length} APC propellers available for this configuration`);
-            }
-        }
-        
-        if (selectedProp) {
-            recommendations.push(`Using APC ${selectedProp.model} (${selectedProp.diameter}"x${selectedProp.pitch}")`);
-            
-            const efficiency = this.calculator.calculateMotorEfficiency(config);
-            if (efficiency > 85) {
-                recommendations.push('Excellent propeller efficiency achieved');
-            } else if (efficiency > 70) {
-                recommendations.push('Good propeller efficiency');
-            } else {
-                recommendations.push('Consider different motor KV or frame size for better efficiency');
-            }
-        }
-        
-        return recommendations;
-    }
-
-    /**
-     * Get thermal efficiency data
-     */
-    getThermalEfficiencyData(config) {
-        // This would be a simplified model of thermal efficiency
-        const kvRating = parseInt(config.motorKv);
-        const batteryType = config.batteryType.split('-')[0];
-        const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
-        
-        // Higher KV motors generally run hotter
-        const baseTemp = 30; // ambient temperature
-        const kvTempIncrease = ((kvRating - 1500) / 1500) * 30;
-        
-        // Li-ion tends to run cooler than LiPo
-        const batteryTempFactor = batteryType === 'lipo' ? 1.2 : 1.0;
-        
-        // Higher cell counts increase temperature
-        const cellTempFactor = 1 + ((cellCount - 3) * 0.15);
-        
-        // Calculate motor temperatures at different throttle levels
-        const throttleLevels = [0, 25, 50, 75, 100];
-        return throttleLevels.map(throttle => {
-            const loadFactor = Math.pow(throttle / 100, 2);
-            const motorTemp = baseTemp + (kvTempIncrease * loadFactor * batteryTempFactor * cellTempFactor);
-            return {
-                throttle: throttle,
-                temperature: Math.round(motorTemp)
-            };
-        });
-    }
-    
-    /**
-     * Get noise level data based on props and motors
-     */
-    getNoiseData(config) {
-        const frameSize = this.calculator.droneType === 'fpv' ? 
-            parseInt(config.frameSize.replace('inch', '')) : 
-            parseInt(config.wingspan) / 100;
-        
-        const kvRating = parseInt(config.motorKv);
-        
-        // Base noise level in dB - bigger props are generally louder
-        const baseNoise = 60 + (frameSize * 2);
-        
-        // Higher KV motors tend to be louder
-        const kvNoiseFactor = 1 + ((kvRating - 1500) / 1500) * 0.5;
-        
-        // Calculate noise at different throttle levels
-        const throttleLevels = [0, 25, 50, 75, 100];
-        return throttleLevels.map(throttle => {
-            // Noise scales non-linearly with throttle
-            const throttleFactor = Math.pow(throttle / 100, 1.5);
-            const noiseLevel = baseNoise * throttleFactor * kvNoiseFactor;
-            return {
-                throttle: throttle,
-                noise: Math.round(noiseLevel)
-            };
-        });
-    }
-    
-    /**
-     * Get propeller efficiency data
-     */
-    getPropEfficiencyData(config) {
-        const motorKv = parseInt(config.motorKv);
-        const batteryVoltage = this.getBatteryVoltage(config);
-        const propSize = parseFloat(config.frameSize || config.wingspan);
-        
-        // Calculate optimal RPM: Optimal RPM range = 2300 × prop diameter in inches
-        const optimalRPM = 2300 * propSize;
-        
-        // Sample RPM range from 50% to 150% of optimal
-        const rpmPoints = [0.5, 0.75, 1.0, 1.25, 1.5];
-        
-        // Propeller constant for efficiency calculation
-        const propConstant = 0.12; // Example value
-        
-        return rpmPoints.map(factor => {
-            const rpm = optimalRPM * factor;
-            const throttlePercent = (rpm / (motorKv * batteryVoltage)) * 100;
-            
-            // Simplified thrust calculation
-            const thrust = 0.5 * Math.pow(rpm/1000, 2) * propSize;
-            
-            // Simplified power calculation
-            const power = throttlePercent/100 * batteryVoltage * (batteryVoltage/motorKv);
-            
-            // Efficiency: η = (Thrust² ÷ Power) × k
-            const efficiency = (Math.pow(thrust, 2) / power) * propConstant;
-            
-            return {
-                rpmFactor: factor.toFixed(2),
-                rpm: rpm.toFixed(0),
-                efficiency: Math.min(100, efficiency).toFixed(2)
-            };
-        });
-    }
-    
-    /**
-     * Get thrust curve data
-     */
-    getThrustCurveData(config) {
-        const frameSize = this.calculator.droneType === 'fpv' ? 
-            parseInt(config.frameSize.replace('inch', '')) : 
-            parseInt(config.wingspan) / 200;
-            
-        const kvRating = parseInt(config.motorKv);
-        const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
-        
-        // Bigger props and higher KV generate more thrust
-        const baseThrust = frameSize * 100 * (kvRating / 1500) * (cellCount / 4);
-        
-        // Thrust curve is non-linear with throttle
-        const throttleLevels = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
-        return throttleLevels.map(throttle => {
-            // Thrust increases with approximately square of throttle 
-            // (simplified aerodynamic model)
-            const thrustFactor = Math.pow(throttle / 100, 1.8);
-            const thrust = baseThrust * thrustFactor;
-            return {
-                throttle: throttle,
-                thrust: Math.round(thrust)
+                thrust: parseFloat(thrust.toFixed(2))
             };
         });
     }
@@ -999,7 +754,7 @@ class ComponentAnalyzer {
             const thermalScores = { 'Low': 15, 'Medium': 5, 'High': -5, 'Critical': -15 };
             score += thermalScores[overallRisk] || 0;
             
-            return Math.max(0, Math.min(100, Math.round(score)));
+            return parseFloat(Math.max(0, Math.min(100, score)).toFixed(2));
         } catch (error) {
             console.error('Error calculating overall score:', error);
             return 50; // Default score on error
@@ -1081,5 +836,250 @@ class ComponentAnalyzer {
         return this.droneType === 'fpv' ? 
             this.calculator.calculateFPVDroneWeight(config) : 
             this.calculator.calculateFixedWingWeight(config);
+    }
+
+    /**
+     * Get APC thrust curve data using real propeller performance data
+     */
+    getAPCThrustCurveData(config) {
+        // Check if APC is available and enabled
+        if (!this.calculator || !this.calculator.apcEnabled || !this.calculator.apcIntegration) {
+            // Fallback to basic thrust curve calculation
+            return this.getThrustCurveData(config);
+        }
+
+        try {
+            // Generate APC performance data
+            const apcPerformanceData = this.calculator.generateAPCPerformanceData(config);
+            
+            if (!apcPerformanceData || !apcPerformanceData.thrust || !apcPerformanceData.rpm) {
+                // Fallback to basic calculation if APC data unavailable
+                return this.getThrustCurveData(config);
+            }
+
+            // Convert RPM-based data to throttle-based data for charts
+            const maxRPM = Math.max(...apcPerformanceData.rpm);
+            const minRPM = Math.min(...apcPerformanceData.rpm);
+            
+            return apcPerformanceData.rpm.map((rpm, index) => {
+                const throttlePercent = Math.round(((rpm - minRPM) / (maxRPM - minRPM)) * 100);
+                // Convert thrust from Newtons to grams for UI compatibility
+                const thrustGrams = apcPerformanceData.thrust[index] * 101.97; // N to grams conversion
+                
+                return {
+                    throttle: throttlePercent,
+                    thrust: parseFloat(thrustGrams.toFixed(2))
+                };
+            }).sort((a, b) => a.throttle - b.throttle);
+
+        } catch (error) {
+            console.error('Error generating APC thrust curve data:', error);
+            // Fallback to basic calculation
+            return this.getThrustCurveData(config);
+        }
+    }
+
+    /**
+     * Get APC propeller efficiency data using real performance data
+     */
+    getAPCPropEfficiencyData(config) {
+        // Check if APC is available and enabled
+        if (!this.calculator || !this.calculator.apcEnabled || !this.calculator.apcIntegration) {
+            // Fallback to basic efficiency calculation
+            return this.getPropEfficiencyData(config);
+        }
+
+        try {
+            // Generate APC performance data
+            const apcPerformanceData = this.calculator.generateAPCPerformanceData(config);
+            
+            if (!apcPerformanceData || !apcPerformanceData.efficiency || !apcPerformanceData.rpm) {
+                // Fallback to basic calculation if APC data unavailable
+                return this.getPropEfficiencyData(config);
+            }
+
+            return apcPerformanceData.rpm.map((rpm, index) => {
+                const efficiency = apcPerformanceData.efficiency[index];
+                
+                return {
+                    rpm: Math.round(rpm),
+                    efficiency: parseFloat((efficiency * 100).toFixed(2)) // Convert to percentage
+                };
+            }).filter(point => point.efficiency > 0); // Remove invalid efficiency points
+
+        } catch (error) {
+            console.error('Error generating APC propeller efficiency data:', error);
+            // Fallback to basic calculation
+            return this.getPropEfficiencyData(config);
+        }
+    }
+
+    /**
+     * Get APC propeller analysis with detailed performance insights
+     */
+    getAPCPropellerAnalysis(config) {
+        // Check if APC is available and enabled
+        if (!this.calculator || !this.calculator.apcEnabled || !this.calculator.apcIntegration) {
+            return {
+                available: false,
+                message: 'APC analysis not available - using estimated calculations',
+                propeller: null,
+                performance: null
+            };
+        }
+
+        try {
+            // Get selected propeller information
+            const selectedProp = this.calculator.getSelectedPropeller(config);
+            if (!selectedProp) {
+                return {
+                    available: false,
+                    message: 'No suitable APC propeller found for this configuration',
+                    propeller: null,
+                    performance: null
+                };
+            }
+
+            // Get performance data
+            const performanceData = this.calculator.generateAPCPerformanceData(config);
+            
+            if (performanceData) {
+                const maxThrust = Math.max(...performanceData.thrust);
+                const maxEfficiency = Math.max(...performanceData.efficiency);
+                const avgEfficiency = performanceData.efficiency.reduce((a, b) => a + b, 0) / performanceData.efficiency.length;
+
+                return {
+                    available: true,
+                    message: 'Real APC propeller data available',
+                    propeller: {
+                        id: selectedProp.id || selectedProp,
+                        diameter: selectedProp.diameter,
+                        pitch: selectedProp.pitch
+                    },
+                    performance: {
+                        maxThrust: parseFloat((maxThrust * 101.97).toFixed(2)), // Convert to grams
+                        maxEfficiency: parseFloat((maxEfficiency * 100).toFixed(2)), // Convert to percentage
+                        avgEfficiency: parseFloat((avgEfficiency * 100).toFixed(2)),
+                        dataPoints: performanceData.rpm.length
+                    }
+                };
+            }
+
+            return {
+                available: true,
+                message: 'APC propeller selected but performance data unavailable',
+                propeller: {
+                    id: selectedProp.id || selectedProp,
+                    diameter: selectedProp.diameter,
+                    pitch: selectedProp.pitch
+                },
+                performance: null
+            };
+
+        } catch (error) {
+            console.error('Error generating APC propeller analysis:', error);
+            return {
+                available: false,
+                message: 'Error accessing APC propeller analysis',
+                propeller: null,
+                performance: null
+            };
+        }
+    }
+
+    /**
+     * Get APC-based recommendations for propeller optimization
+     */
+    getAPCRecommendations(config) {
+        const recommendations = [];
+
+        // Check if APC is available and enabled
+        if (!this.calculator || !this.calculator.apcEnabled || !this.calculator.apcIntegration) {
+            recommendations.push({
+                type: 'info',
+                message: 'APC propeller database not available - recommendations based on estimated calculations'
+            });
+            return recommendations;
+        }
+
+        try {
+            // Get available propellers for this configuration
+            const availableProps = this.calculator.getAvailableAPCPropellers ? 
+                this.calculator.getAvailableAPCPropellers(config) : [];
+
+            if (availableProps.length === 0) {
+                recommendations.push({
+                    type: 'warning',
+                    message: 'No APC propellers available for this frame size - consider adjusting configuration'
+                });
+                return recommendations;
+            }
+
+            // Get current propeller analysis
+            const analysis = this.getAPCPropellerAnalysis(config);
+            
+            if (analysis.available && analysis.performance) {
+                // Performance-based recommendations
+                if (analysis.performance.maxEfficiency < 70) {
+                    recommendations.push({
+                        type: 'suggestion',
+                        message: `Current propeller efficiency is ${analysis.performance.maxEfficiency}% - consider alternative propellers for better efficiency`
+                    });
+                }
+
+                if (analysis.performance.avgEfficiency < 50) {
+                    recommendations.push({
+                        type: 'warning',
+                        message: 'Average efficiency is low - check propeller selection and motor KV compatibility'
+                    });
+                }
+
+                // Provide alternative propeller suggestions
+                if (availableProps.length > 1) {
+                    const alternatives = availableProps
+                        .filter(prop => prop.id !== analysis.propeller.id)
+                        .slice(0, 2);
+                    
+                    if (alternatives.length > 0) {
+                        recommendations.push({
+                            type: 'info',
+                            message: `Alternative APC propellers available: ${alternatives.map(p => p.id).join(', ')}`
+                        });
+                    }
+                }
+            } else {
+                recommendations.push({
+                    type: 'info',
+                    message: `${availableProps.length} APC propellers available for this configuration`
+                });
+            }
+
+            // Configuration-specific recommendations
+            const frameSize = parseInt(config.frameSize?.replace('inch', '') || '5');
+            const motorKv = parseInt(config.motorKv);
+
+            if (frameSize >= 7 && motorKv > 2500) {
+                recommendations.push({
+                    type: 'suggestion',
+                    message: 'Large frame with high KV motor - consider lower KV for better efficiency with APC propellers'
+                });
+            }
+
+            if (frameSize <= 3 && motorKv < 2000) {
+                recommendations.push({
+                    type: 'suggestion',
+                    message: 'Small frame with low KV motor - consider higher KV for better performance with APC propellers'
+                });
+            }
+
+        } catch (error) {
+            console.error('Error generating APC recommendations:', error);
+            recommendations.push({
+                type: 'error',
+                message: 'Unable to generate APC recommendations - check propeller data availability'
+            });
+        }
+
+        return recommendations;
     }
 }
