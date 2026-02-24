@@ -962,7 +962,7 @@ class DroneCharts {
                 const baseEfficiency = 0.7 - (parseInt(kv) - 1700) / 1700 * 0.3;
                 // Efficiency curve peaks at around 40-60% throttle
                 const throttleFactor = 1 - Math.abs((throttle - 50) / 50);
-                return baseEfficiency * (0.7 + throttleFactor * 0.3);
+                return parseFloat((baseEfficiency * (0.7 + throttleFactor * 0.3)).toFixed(2));
             });
             
             datasets.push({
@@ -992,6 +992,19 @@ class DroneCharts {
                     legend: {
                         position: 'top',
                         labels: { boxWidth: 12, font: { size: 10 } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + (context.parsed.y * 100).toFixed(2) + '%';
+                            }
+                        }
+                    },
+                    datalabels: {
+                        formatter: function(value) {
+                            return (value * 100).toFixed(2) + '%';
+                        },
+                        font: { size: 9 }
                     }
                 },
                 scales: {
