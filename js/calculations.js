@@ -142,11 +142,12 @@ class DroneCalculator {
             'delta': 0.95        // Delta is between conventional and flying wing
         };
 
+        // Fixed wing motors: lower KV = larger stator = heavier
         const motorWeights = {
-            '1700': 45,
-            '2400': 40,
-            '2700': 38,
-            '3000': 35
+            '1700': 55,
+            '2400': 50,
+            '2700': 48,
+            '3000': 45
         };
 
         // Updated battery weights for both LiPo and Li-Ion
@@ -226,28 +227,33 @@ class DroneCalculator {
         let avgCurrent;
 
         if (this.droneType === 'fpv') {
-            // FPV drones draw more current - Fixed the calculation to be more realistic
-            const kvFactor = parseInt(config.motorKv) / 2400; // Normalized to a common KV
-            // Li-ion can't handle as high discharge rates as LiPo
+            // FPV quad average current draw
+            // A 5" quad at 2400KV on 4S draws ~15-25A in mixed flying
+            // Base: weight-driven power demand. Hover power ≈ (mg)^1.5 / (2ρA)^0.5
+            // Simplified: heavier → more current, higher KV → more current, bigger props → more efficient
+            const kvFactor = parseInt(config.motorKv) / 2400;
+            const frameSize = parseInt(config.frameSize.replace('inch', ''));
+            const propEfficiency = Math.sqrt(frameSize / 5); // Larger props are more efficient per gram of thrust
             const dischargeFactor = batteryType === 'lipo' ? 1.0 : 0.7;
             
-            // Completely revised formula for more reasonable current draw
-            avgCurrent = (totalWeight / 250) * kvFactor * dischargeFactor; // Much more realistic estimate
+            // Weight-proportional current with KV scaling and prop efficiency
+            // For 539g, 2400KV, 5": (539/55) * 1.0 / 1.0 * 1.0 = 9.8A average
+            avgCurrent = (totalWeight / 55) * kvFactor / propEfficiency * dischargeFactor;
         } else {
-            // Fixed wings are more efficient
+            // Fixed wings are ~3-4x more efficient than quads
             const dischargeFactor = batteryType === 'lipo' ? 1.0 : 0.8;
-            // Revised formula for fixed wing
-            avgCurrent = (totalWeight / 500) * 0.8 * dischargeFactor;
+            const wingspan = parseInt(config.wingspan) / 1000;
+            // Larger wingspan = more efficient (lower current for same weight)
+            avgCurrent = (totalWeight / 200) * dischargeFactor / Math.sqrt(wingspan);
         }
 
         // Calculate flight time in minutes
         // Using a discharge factor (you don't fully discharge the battery)
-        const dischargeSafety = batteryType === 'lipo' ? 0.8 : 0.9; // Li-ion can be discharged more deeply
+        const dischargeSafety = batteryType === 'lipo' ? 0.8 : 0.9;
         const calculatedTime = (capacityFactor / avgCurrent) * 60 * dischargeSafety * energyDensityFactor;
         
-        // Add a minimum realistic flight time
-        // Using safety bounds
-        const boundedTime = Math.max(Math.min(calculatedTime, 60), 2); // Between 2-60 minutes
+        // Realistic bounds: 2-45 minutes
+        const boundedTime = Math.max(Math.min(calculatedTime, 45), 2);
         return parseFloat(boundedTime.toFixed(2));
     }
 
@@ -308,10 +314,11 @@ class DroneCalculator {
             const kvFactor = parseInt(config.motorKv) / 1000;
             const frameSize = parseInt(config.frameSize.replace('inch', ''));
             
-            // Larger frames typically have higher top speeds due to larger props
+            // Larger frames/props have higher pitch speed
             const frameFactor = Math.sqrt(frameSize / 5);
             
             // Calculate rough max speed in km/h
+            // A 5" 2400KV on 4S: 2.4 * 4 * 20 * 1.0 * 1.0 = 192 → reasonable for FPV
             return parseFloat((kvFactor * cellCount * 20 * frameFactor * powerFactor).toFixed(2));
         } else {
             const wingspan = parseInt(config.wingspan);
@@ -319,18 +326,21 @@ class DroneCalculator {
             
             // Base speed depends on wing type
             const baseSpeed = {
-                'conventional': 70,
-                'flying': 85,
-                'delta': 90
+                'conventional': 45,  // Conservative cruiser
+                'flying': 55,        // Flying wings are faster
+                'delta': 60          // Delta wings fastest
             }[wingType];
             
-            // Size factor - smaller wings usually faster
-            const sizeFactor = Math.pow(1000 / wingspan, 0.5);
+            // Larger wingspan = slower (more drag, optimized for efficiency)
+            const sizeFactor = Math.pow(1000 / wingspan, 0.3);
             
-            // Motor contribution
-            const kvFactor = parseInt(config.motorKv) / 2000;
+            // Motor contribution (diminishing returns)
+            const kvFactor = Math.pow(parseInt(config.motorKv) / 2000, 0.5);
             
-            return parseFloat((baseSpeed * sizeFactor * kvFactor * cellCount * powerFactor).toFixed(2));
+            // Cell count adds voltage → more speed, but sub-linear
+            const voltageFactor = Math.pow(cellCount / 4, 0.6);
+            
+            return parseFloat((baseSpeed * sizeFactor * kvFactor * voltageFactor * powerFactor).toFixed(2));
         }
     }
 
@@ -429,19 +439,19 @@ class DroneCalculator {
             const frameSize = parseInt(config.frameSize.replace('inch', ''));
             const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
             
-            // Revised formula for more realistic current demands
-            // Estimate maximum current draw per motor during hard acceleration
-            const maxCurrentPerMotor = kvFactor * frameSize * 0.6; // Reduced multiplier
+            // Max current per motor scales with KV, prop size, and voltage
+            // A 5" 2400KV on 4S draws ~30A burst per motor
+            const maxCurrentPerMotor = kvFactor * frameSize * cellCount * 0.6;
             
-            // Total maximum current (4 motors but not all at full power simultaneously)
-            maxCurrentDraw = maxCurrentPerMotor * 3; // Changed from 4 to 3 to reflect real-world usage
+            // Total max current (4 motors, ~75% simultaneous max is realistic)
+            maxCurrentDraw = maxCurrentPerMotor * 3;
         } else {
             const kvFactor = parseInt(config.motorKv) / 1000;
             const wingspan = parseInt(config.wingspan) / 1000;
             const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
             
-            // Revised formula for fixed wing
-            maxCurrentDraw = kvFactor * wingspan * 2; // Reduced multiplier
+            // Single motor fixed wing, full throttle burst
+            maxCurrentDraw = kvFactor * wingspan * cellCount * 1.5;
         }
         
         // Calculate the C rating (current / capacity)
@@ -470,30 +480,50 @@ class DroneCalculator {
         let hoverCurrent;
         
         if (this.droneType === 'fpv') {
-            // For a quadcopter to hover, it needs to produce enough thrust to counter gravity
-            // A very rough estimate is that hover requires ~50% of max throttle
-            const kvFactor = parseInt(config.motorKv) / 1000;
+            // Hover power: P_hover ≈ mg * sqrt(mg / (2 * rho * A))
+            // Higher KV → motor runs faster for same thrust → draws more amps
+            // Larger prop → more disc area → more efficient hover (less current)
+            const kvFactor = parseInt(config.motorKv) / 2400;
             const frameSize = parseInt(config.frameSize.replace('inch', ''));
+            const propDiameter = frameSize * 0.0254; // inches to meters
+            const discArea = Math.PI * Math.pow(propDiameter / 2, 2) * 4; // 4 props
+            const weightN = (totalWeight / 1000) * 9.81; // weight in Newtons
             
-            // Current per motor at hover (simplified)
-            const currentPerMotor = (totalWeight / 1000) * 9.8 / 4 / (voltage * 0.7 * kvFactor * 0.05 * frameSize);
+            // Hover power from momentum theory: P = T * sqrt(T / (2 * rho * A))
+            const rho = 1.225; // air density kg/m³
+            const hoverPower = weightN * Math.sqrt(weightN / (2 * rho * discArea));
             
-            // Total hover current
-            hoverCurrent = currentPerMotor * 4;
+            // Account for motor+ESC+prop inefficiency (~50-60% overall)
+            const systemEfficiency = 0.55;
+            const electricalPower = hoverPower / systemEfficiency;
+            
+            // Higher KV motors are slightly less efficient at hover (optimized for speed)
+            const kvEfficiencyPenalty = 0.85 + 0.15 * kvFactor;
+            
+            hoverCurrent = (electricalPower * kvEfficiencyPenalty) / voltage;
         } else {
-            // For fixed wing, cruise current is typically much lower than for a quad
+            // For fixed wing, cruise current: need to overcome drag
             const wingspan = parseInt(config.wingspan) / 1000;
             const wingType = config.wingType;
             
-            // Efficiency factor based on wing type
+            // Efficiency factor based on wing type (L/D ratio proxy)
             const efficiencyFactor = {
                 'conventional': 1.0,
-                'flying': 0.9,
-                'delta': 1.1
+                'flying': 0.85,  // Flying wings have lower drag
+                'delta': 0.95
             }[wingType];
             
-            // Very simplified cruise current calculation
-            hoverCurrent = (totalWeight / 1000) * 9.8 / (voltage * 1.5 * wingspan * efficiencyFactor);
+            // Cruise power ≈ weight * cruise_speed / L_D_ratio
+            // Simplified: P = mg * v_cruise / (L/D)
+            // For a typical RC plane, L/D ~ 8-12, cruise ~ 15-25 m/s
+            const wingArea = (wingspan * wingspan / 6); // rough AR-based area estimate in m²
+            const wingLoading = (totalWeight / 1000) * 9.81 / wingArea;
+            const cruiseSpeed = Math.sqrt(2 * wingLoading / (1.225 * 0.5)); // speed for Cl~0.5
+            const liftToDrag = 8 * Math.sqrt(wingspan) * (1 / efficiencyFactor);
+            const cruisePower = (totalWeight / 1000) * 9.81 * cruiseSpeed / liftToDrag;
+            
+            const systemEfficiency = 0.6;
+            hoverCurrent = cruisePower / (systemEfficiency * voltage);
         }
         
         return parseFloat(hoverCurrent.toFixed(2));
