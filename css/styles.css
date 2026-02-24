@@ -376,7 +376,31 @@ h2 {
 }
 
 .sensitivity-wrap {
+  height: 220px;
   min-height: 220px;
+  position: relative;
+}
+
+.solver-result {
+  margin-top: 10px;
+  background: rgba(108, 99, 255, 0.15);
+  border: 1px solid rgba(108, 99, 255, 0.4);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.solver-result-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #a49cff;
+  margin-bottom: 6px;
+}
+
+.solver-result-body {
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: pre-line;
 }
 
 footer {

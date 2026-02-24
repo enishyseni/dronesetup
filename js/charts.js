@@ -51,8 +51,12 @@ class DroneCharts {
         Chart.defaults.responsive = true;
         Chart.defaults.maintainAspectRatio = false;
 
-        // Register Chart.js plugins if needed
-        Chart.register(ChartDataLabels);
+        // The CDN auto-registers ChartDataLabels globally, which causes it to
+        // run on EVERY chart — including ones created with empty data — and crash
+        // with "Cannot read properties of undefined (reading '_labels')".
+        // Unregister it globally; only the two charts that need it pass it
+        // explicitly via the per-chart `plugins` array.
+        try { Chart.unregister(ChartDataLabels); } catch(e) {}
 
         // Create empty base charts (first tab)
         this.createSpeedChart([]);
@@ -420,6 +424,7 @@ class DroneCharts {
         
         this.charts.weightDistributionChart = new Chart(ctx, {
             type: 'pie',
+            plugins: [ChartDataLabels],
             data: {
                 labels: labels,
                 datasets: [{
@@ -446,6 +451,7 @@ class DroneCharts {
                         }
                     },
                     datalabels: {
+                        display: true,
                         formatter: (value, ctx) => {
                             const totalWeight = values.reduce((a, b) => a + b, 0);
                             const percentage = parseFloat(((value / totalWeight) * 100).toFixed(2));
@@ -976,6 +982,7 @@ class DroneCharts {
         
         this.charts.efficiencyMapChart = new Chart(ctx, {
             type: 'line',
+            plugins: [ChartDataLabels],
             data: {
                 labels: ['0%', '20%', '40%', '60%', '80%', '100%'],
                 datasets: datasets
@@ -1001,6 +1008,7 @@ class DroneCharts {
                         }
                     },
                     datalabels: {
+                        display: true,
                         formatter: function(value) {
                             return (value * 100).toFixed(2) + '%';
                         },

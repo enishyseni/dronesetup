@@ -438,6 +438,17 @@ document.addEventListener('DOMContentLoaded', function() {
         URL.revokeObjectURL(url);
     }
 
+    // Sync all slider positions to match the current select values
+    function syncSlidersToSelects() {
+        configSliders.forEach(slider => {
+            const configParam = slider.dataset.config;
+            const selectEl = document.getElementById(configParam);
+            if (!selectEl || !sliderConfigMap[configParam]) return;
+            const valueIndex = sliderConfigMap[configParam].indexOf(selectEl.value);
+            if (valueIndex >= 0) slider.value = valueIndex;
+        });
+    }
+
     function applyMissionProfile(profileId) {
         const profiles = {
             freestyle: { type: 'fpv', frameSize: '5inch', motorKv: '2700', batteryType: 'lipo-6s', batteryCapacity: '1500', camera: 'digital', vtxPower: '600', flightController: 'f7' },
@@ -464,6 +475,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (el) el.value = value;
         });
 
+        syncSlidersToSelects();
         updateResults();
         droneCharts.updateCharts(getCurrentConfig(), getCompareMetric());
     }
@@ -528,7 +540,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
+        const resultEl = document.getElementById('solverResult');
+        const resultBodyEl = document.getElementById('solverResultBody');
+
         if (!best) {
+            if (resultEl) {
+                resultEl.style.display = 'block';
+                resultEl.style.borderColor = 'rgba(255,71,87,0.5)';
+                resultEl.style.background = 'rgba(255,71,87,0.1)';
+                const titleEl = resultEl.querySelector('.solver-result-title');
+                if (titleEl) titleEl.textContent = 'No Match Found';
+                if (resultBodyEl) resultBodyEl.textContent = 'No configuration met all constraints. Try looser targets.';
+            }
             showUserWarning('No configuration met all constraints. Try looser targets.');
             return;
         }
@@ -538,8 +561,30 @@ document.addEventListener('DOMContentLoaded', function() {
             if (el) el.value = value;
         });
 
+        syncSlidersToSelects();
         updateResults();
         droneCharts.updateCharts(getCurrentConfig(), getCompareMetric());
+
+        if (resultEl && resultBodyEl) {
+            resultEl.style.display = 'block';
+            resultEl.style.borderColor = 'rgba(108,99,255,0.4)';
+            resultEl.style.background = 'rgba(108,99,255,0.15)';
+            const titleEl = resultEl.querySelector('.solver-result-title');
+            if (titleEl) titleEl.textContent = 'Best Match Applied ✓';
+            const m = best.metrics;
+            const c = best.config;
+            const frameLabel = calculator.droneType === 'fpv'
+                ? `Frame: ${c.frameSize}`
+                : `Wing: ${c.wingspan}mm (${c.wingType})`;
+            const lines = [
+                `${frameLabel}  |  Motor: ${c.motorKv}KV`,
+                `Battery: ${c.batteryType}  ${c.batteryCapacity}mAh  |  VTX: ${c.vtxPower}mW`,
+                `Flight Time: ${m.flightTime.toFixed(1)} min  |  Range: ${m.range.toFixed(0)} m`,
+                `Weight: ${m.totalWeight.toFixed(0)} g  |  Payload: ${m.payloadCapacity.toFixed(0)} g`
+            ];
+            resultBodyEl.textContent = lines.join('\n');
+        }
+
         showUserInfo(`Solver applied best match: ${best.metrics.flightTime.toFixed(1)} min, ${best.metrics.range.toFixed(0)} m.`);
     }
     
@@ -998,20 +1043,9 @@ document.addEventListener('DOMContentLoaded', function() {
         showUserError('Application initialization failed. Some features may not work correctly.');
     }
     
-    // Improved tab button handling for charts
-    const tabButtons = document.querySelectorAll('.tab-btn');
-    if (tabButtons.length > 0) {
-        tabButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                // When any tab is clicked, do a complete chart refresh
-                setTimeout(() => {
-                    console.log("Tab clicked, doing complete chart refresh");
-                    const config = getCurrentConfig();
-                    droneCharts.updateCharts(config, null);
-                }, 100);
-            });
-        });
-    }
+    // Tab chart refresh is handled by DroneCharts.setupTabs() — no duplicate
+    // listener needed here. A second listener was causing charts to be destroyed
+    // and recreated twice per click, racing with Chart.js animation frames.
     
     // Also ensure graphs load when window is resized
     window.addEventListener('resize', function() {
