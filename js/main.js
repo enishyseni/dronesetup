@@ -73,14 +73,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Function to collect current configuration
+    // Always include ALL inputs — hidden inputs still hold valid values needed by calculations
     function getCurrentConfig() {
         const config = {};
         configInputs.forEach(input => {
-            if (!input.parentElement.classList.contains('hidden')) {
-                config[input.id] = input.value;
-            }
+            config[input.id] = input.value;
         });
         return config;
+    }
+
+    // Get the active comparison metric from the "Analyze Impact By" selector
+    function getCompareMetric() {
+        const compareBySelect = document.getElementById('compareBy');
+        return compareBySelect ? compareBySelect.value : 'batteryType';
     }
     
     // Enhanced function to update results with error handling
@@ -150,11 +155,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateAdvancedMetrics(config);
             }
             
-            // Update charts with current configuration
-            // This ensures that APC propeller changes are reflected in the charts
-            if (droneCharts && droneCharts.updateCharts) {
-                droneCharts.updateCharts(config, null);
-            }
+            // Charts are updated separately by callers using the compareBy metric
+            // to avoid redundant double-updates
         } catch (error) {
             console.error('Error updating results:', error);
             showUserError('Error calculating results. Please check your configuration.');
@@ -215,6 +217,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateSlidersForDroneType();
         
         updateResults();
+        droneCharts.updateCharts(getCurrentConfig(), getCompareMetric());
     }
     
     // REVISED chart initialization with pre-loading data for comparison charts
@@ -320,8 +323,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             updateResults();
             
-            // When user changes a parameter, update charts to compare different values of that parameter
-            droneCharts.updateCharts(getCurrentConfig(), this.id);
+            // Use the "Analyze Impact By" selector to determine comparison metric
+            const metric = getCompareMetric();
+            droneCharts.updateCharts(getCurrentConfig(), metric);
         });
     });
     
@@ -366,6 +370,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Update calculations when propeller selection mode changes
                 updateResults();
+                droneCharts.updateCharts(getCurrentConfig(), getCompareMetric());
             });
         }
 
@@ -373,6 +378,7 @@ document.addEventListener('DOMContentLoaded', function() {
             apcPropellerSelect.addEventListener('change', function() {
                 // Update calculations when specific propeller is selected
                 updateResults();
+                droneCharts.updateCharts(getCurrentConfig(), getCompareMetric());
             });
         }
     }
@@ -451,8 +457,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     updateAPCPropellerList();
                 }
                 
-                // Refresh charts with APC data
+                // Refresh metrics and charts with APC data
                 updateResults();
+                droneCharts.updateCharts(getCurrentConfig(), getCompareMetric());
                 
             } else {
                 console.log('APC data not available - using simplified calculations');

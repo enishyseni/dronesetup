@@ -93,7 +93,10 @@ class DroneCharts {
     
     createChartsForActiveTab(tabId) {
         const config = this.getCurrentConfig();
-        const data = this.calculator.getComparisonData(config, 'batteryType');
+        // Use the "Analyze Impact By" selector value instead of hardcoded batteryType
+        const compareBySelect = document.getElementById('compareBy');
+        const metric = compareBySelect ? compareBySelect.value : 'batteryType';
+        const data = this.calculator.getComparisonData(config, metric);
         
         if (!data) return;
         
@@ -128,24 +131,13 @@ class DroneCharts {
     }
     
     getCurrentConfig() {
-        // Get all configuration inputs
+        // Get all configuration inputs — include all regardless of visibility
+        // Hidden inputs still hold valid values needed by calculations
         const configInputs = document.querySelectorAll('.glass-select');
         const config = {};
         
         configInputs.forEach(input => {
-            // Check if any ancestor has the 'hidden' class
-            let isHidden = false;
-            let el = input.parentElement;
-            while (el) {
-                if (el.classList && el.classList.contains('hidden')) {
-                    isHidden = true;
-                    break;
-                }
-                el = el.parentElement;
-            }
-            if (!isHidden) {
-                config[input.id] = input.value;
-            }
+            config[input.id] = input.value;
         });
         
         return config;
@@ -1219,7 +1211,12 @@ class DroneCharts {
     }
 
     updateCharts(config, primaryMetric) {
-        // Get comparison data for the selected metric (if specified)
+        // If no metric specified, use the compareBy selector value
+        if (!primaryMetric) {
+            const compareBySelect = document.getElementById('compareBy');
+            primaryMetric = compareBySelect ? compareBySelect.value : 'batteryType';
+        }
+        // Get comparison data for the selected metric
         const data = this.calculator.getComparisonData(config, primaryMetric);
         
         // Update charts on current tab
