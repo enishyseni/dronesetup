@@ -6,9 +6,6 @@ document.addEventListener('DOMContentLoaded', function() {
         calculator = new DroneCalculator();
         componentAnalyzer = new ComponentAnalyzer(calculator);
         droneCharts = new DroneCharts(calculator, componentAnalyzer);
-        
-        // Initialize APC Integration
-        initializeAPCIntegration();
     } catch (error) {
         console.error('Failed to initialize calculators:', error);
         showUserError('Failed to initialize application. Please refresh the page.');
@@ -142,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function() {
             safelyUpdateElementText('totalWeight', `${metrics.totalWeight}`);
             safelyUpdateElementText('flightTime', `${metrics.flightTime}`);
             safelyUpdateElementText('maxSpeed', `${metrics.maxSpeed}`);
-            safelyUpdateElementText('pwr', `${metrics.powerToWeight}`);
+            safelyUpdateElementText('powerToWeight', `${metrics.powerToWeight}`);
             safelyUpdateElementText('range', `${metrics.range}`);
             safelyUpdateElementText('payloadCapacity', `${metrics.payloadCapacity}`);
             safelyUpdateElementText('dischargeRate', `${metrics.dischargeRate}`);
@@ -173,15 +170,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Previous updateElementText function is now just for logging
-    function updateElementText(elementId, text) {
-        const element = document.getElementById(elementId);
-        if (element) {
-            element.textContent = text;
-        } else {
-            // Log warning to console but don't show to user
-            console.debug(`Element with ID '${elementId}' not found in the DOM.`);
-        }
-    }
+    // (Removed - superseded by safelyUpdateElementText)
     
     // Function to update advanced metrics with null checks
     function updateAdvancedMetrics(config) {
@@ -202,35 +191,21 @@ document.addEventListener('DOMContentLoaded', function() {
         safelyUpdateElementText('recommendedP', pids.P.toFixed(2));
         safelyUpdateElementText('recommendedI', pids.I.toFixed(2));
         safelyUpdateElementText('recommendedD', pids.D.toFixed(2));
-        
-        // Get power system optimization data
-        const powerSystem = componentAnalyzer.getPowerSystemOptimization(config);
-        safelyUpdateElementText('powerEfficiency', `${powerSystem.efficiency.toFixed(2)}%`);
-        safelyUpdateElementText('thermalRise', `${powerSystem.thermalRise.toFixed(2)}°C`);
-        
-        // Get frame geometry effects
-        const frameGeometry = componentAnalyzer.getFrameGeometryEffects(config);
-        safelyUpdateElementText('frameFrequency', `${frameGeometry.naturalFrequency.toFixed(2)} Hz`);
-        safelyUpdateElementText('propwashResistance', frameGeometry.propwashResistance);
-        
-        // Get radio system analysis
-        const radioProtocol = 'crsf';
-        const txPower = 250; // mW
-        const radioSystem = componentAnalyzer.getRadioSystemAnalysis(radioProtocol, txPower);
-        safelyUpdateElementText('radioLatency', radioSystem.latency);
-        safelyUpdateElementText('radioRange', radioSystem.theoreticalRange);
     }
     
     // Function to toggle between drone types
     function toggleDroneType() {
         const isFPV = !droneTypeToggle.checked;
+        const fpvOnlyElements = document.querySelectorAll('.fpv-only');
         
         if (isFPV) {
             calculator.setDroneType('fpv');
             fixedWingOnlyElements.forEach(el => el.classList.add('hidden'));
+            fpvOnlyElements.forEach(el => el.classList.remove('hidden'));
         } else {
             calculator.setDroneType('fixedWing');
             fixedWingOnlyElements.forEach(el => el.classList.remove('hidden'));
+            fpvOnlyElements.forEach(el => el.classList.add('hidden'));
         }
         
         // Also update the analyzer's drone type if needed
@@ -255,34 +230,20 @@ document.addEventListener('DOMContentLoaded', function() {
             // Force data generation for all comparison metrics
             const comparisonMetrics = ['batteryType', 'batteryCapacity', 'motorKv', 'frameSize', 'wingspan'];
             
-            // For each comparison metric, pre-generate the data
+            // Pre-generate the data for logging
             comparisonMetrics.forEach(metric => {
                 const comparisonData = calculator.getComparisonData(config, metric);
-                console.log(`Pre-generating data for ${metric} comparison`);
-                
-                // Store the data in the charts object or directly update the charts
-                if (droneCharts.preloadComparisonData) {
-                    droneCharts.preloadComparisonData(metric, comparisonData);
-                }
+                console.log(`Pre-generated data for ${metric} comparison: ${comparisonData ? comparisonData.length : 0} entries`);
             });
             
-            // Now trigger the actual chart update with this pre-loaded data
+            // Now trigger the actual chart update
             console.log("Updating all charts with initial data");
-            droneCharts.updateCharts(config, 'batteryCapacity'); // Use a specific parameter to ensure comparison views show data
+            droneCharts.updateCharts(config, 'batteryCapacity');
             
-            // Ensure specific graphs mentioned in the issues are properly initialized
+            // Ensure specific graphs are properly initialized
             setTimeout(() => {
-                console.log("Ensuring specific graphs are updated");
-                // Force redraw of specific charts
-                if (droneCharts.updateSpecificChart) {
-                    const problematicCharts = ['maxSpeed', 'flightTime', 'range', 'current'];
-                    problematicCharts.forEach(chartType => {
-                        droneCharts.updateSpecificChart(chartType, config);
-                    });
-                } else {
-                    // If no specific update method, just update all charts again
-                    droneCharts.updateCharts(config, null);
-                }
+                console.log("Re-updating charts for completeness");
+                droneCharts.updateCharts(config, null);
             }, 300);
             
             console.log("Charts initialized successfully");
@@ -368,28 +329,7 @@ document.addEventListener('DOMContentLoaded', function() {
     droneTypeToggle.addEventListener('change', toggleDroneType);
     
     // APC Propeller selection event listeners
-    const propellerTypeSelect = document.getElementById('propellerType');
-    const apcPropSelection = document.getElementById('apcPropSelection');
-    const apcPropellerSelect = document.getElementById('apcPropeller');
-    
-    if (propellerTypeSelect) {
-        propellerTypeSelect.addEventListener('change', function() {
-            const isManual = this.value === 'manual';
-            apcPropSelection.style.display = isManual ? 'block' : 'none';
-            
-            if (isManual && calculator.apcEnabled) {
-                updateAPCPropellerList();
-            }
-            
-            updateResults();
-        });
-    }
-    
-    if (apcPropellerSelect) {
-        apcPropellerSelect.addEventListener('change', function() {
-            updateResults();
-        });
-    }
+    // (Event handlers registered inside setupAPCEventHandlers to avoid duplication)
     
     // APC Integration Functions
     async function initializeAPCIntegration() {
@@ -545,20 +485,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Improved tab button handling for charts
-    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabButtons = document.querySelectorAll('.tab-btn');
     if (tabButtons.length > 0) {
         tabButtons.forEach(button => {
             button.addEventListener('click', function() {
                 // When any tab is clicked, do a complete chart refresh
                 setTimeout(() => {
                     console.log("Tab clicked, doing complete chart refresh");
-                    // Get current configuration
                     const config = getCurrentConfig();
-                    
-                    // Force a redraw of chart containers first
-                    forceChartRedraw();
-                    
-                    // Then update all charts with current config
                     droneCharts.updateCharts(config, null);
                 }, 100);
             });

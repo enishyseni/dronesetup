@@ -170,7 +170,7 @@ class APCDemo {
             console.log(`   @ ${point.rpm} RPM, ${point.airspeed} m/s:`);
             console.log(`     Thrust: ${thrust?.toFixed(2)} N`);
             console.log(`     Power: ${power?.toFixed(2)} W`);
-            console.log(`     Efficiency: ${(efficiency * 100)?.toFixed(2)}%`);
+            console.log(`     Efficiency: ${efficiency != null ? (efficiency * 100).toFixed(2) : 'N/A'}%`);
         });
     }
 
@@ -216,12 +216,9 @@ class APCDemo {
         
         // Group by diameter
         const diameters = {};
-        allProps.forEach(propId => {
-            const specs = this.apcIntegration.database.getPropellerSpecs(propId);
-            if (specs) {
-                const diameter = specs.diameter;
-                diameters[diameter] = (diameters[diameter] || 0) + 1;
-            }
+        allProps.forEach(prop => {
+            const diameter = prop.diameter;
+            diameters[diameter] = (diameters[diameter] || 0) + 1;
         });
         
         console.log('   • By diameter:');

@@ -133,7 +133,17 @@ class DroneCharts {
         const config = {};
         
         configInputs.forEach(input => {
-            if (!input.parentElement.classList.contains('hidden')) {
+            // Check if any ancestor has the 'hidden' class
+            let isHidden = false;
+            let el = input.parentElement;
+            while (el) {
+                if (el.classList && el.classList.contains('hidden')) {
+                    isHidden = true;
+                    break;
+                }
+                el = el.parentElement;
+            }
+            if (!isHidden) {
                 config[input.id] = input.value;
             }
         });
@@ -697,8 +707,15 @@ class DroneCharts {
         
         // Extract numerical value from power-to-weight ratio
         const powerToWeightValues = data.map(d => {
+            const currentConfig = this.getCurrentConfig();
+            // Identify which config key this comparison data is varying
+            const comparisonKey = this._identifyComparisonKey(data, currentConfig);
+            const tempConfig = { ...currentConfig };
+            if (comparisonKey) {
+                tempConfig[comparisonKey] = d.option;
+            }
             const pwrStr = this.calculator.calculatePowerToWeightRatio(
-                { ...this.getCurrentConfig(), [Object.keys(data[0].option)[0]]: d.option },
+                tempConfig,
                 d.weight
             );
             // Make sure we only get the numeric part and parse it as a float with 2 decimal precision
@@ -757,7 +774,12 @@ class DroneCharts {
         
         // Calculate discharge rates for each option
         const dischargeRates = data.map(d => {
-            const tempConfig = { ...this.getCurrentConfig(), [Object.keys(data[0].option)[0]]: d.option };
+            const currentConfig = this.getCurrentConfig();
+            const comparisonKey = this._identifyComparisonKey(data, currentConfig);
+            const tempConfig = { ...currentConfig };
+            if (comparisonKey) {
+                tempConfig[comparisonKey] = d.option;
+            }
             const dischargeStr = this.calculator.calculateBatteryDischargeRate(tempConfig, d.weight);
             return parseInt(dischargeStr.split('C')[0]); // Extract the numerical value
         });
@@ -1091,7 +1113,7 @@ class DroneCharts {
         
         // Apply more robust decimal formatting
         const processedData = propData.map(d => ({
-            rpmFactor: d.rpmFactor,
+            rpmFactor: d.rpmFactor || (d.rpm ? (d.rpm / 1000).toFixed(1) : '0'),
             efficiency: Number(Number(d.efficiency).toFixed(2)),
             thrust: d.thrust || 0,
             power: d.power || 0
@@ -1150,6 +1172,27 @@ class DroneCharts {
         });
     }
 
+    /**
+     * Identify which config key a comparison dataset is varying
+     */
+    _identifyComparisonKey(data, currentConfig) {
+        if (!data || data.length === 0) return null;
+        const option = data[0].option;
+        // Check known option sets
+        const optionSets = {
+            batteryType: ['lipo-3s', 'lipo-4s', 'lipo-6s', 'liion-3s', 'liion-4s', 'liion-6s'],
+            batteryCapacity: ['1300', '1500', '2200', '3000', '4000', '5000'],
+            motorKv: ['1700', '2400', '2700', '3000'],
+            frameSize: ['3inch', '5inch', '7inch', '10inch'],
+            wingspan: ['800', '1000', '1500', '2000'],
+            vtxPower: ['25', '200', '600', '1000']
+        };
+        for (const [key, values] of Object.entries(optionSets)) {
+            if (values.includes(option)) return key;
+        }
+        return null;
+    }
+
     formatLabel(label) {
         // Format the labels to make them more readable
         if (label.includes('lipo') || label.includes('liion')) {
@@ -1161,10 +1204,15 @@ class DroneCharts {
         }
         // Check if it's a number (capacity or wing span)
         if (!isNaN(parseInt(label))) {
-            if (parseInt(label) > 500) {
-                return `${label} mm`;  // It's wingspan - add space
+            const num = parseInt(label);
+            // Known wingspan values vs battery capacity values
+            const wingspanValues = [800, 1000, 1500, 2000];
+            const capacityValues = [1300, 1500, 2200, 3000, 4000, 5000];
+            
+            if (this.calculator.droneType === 'fixedWing' && wingspanValues.includes(num)) {
+                return `${label} mm`;
             } else {
-                return `${label} mAh`; // It's capacity - add space
+                return `${label} mAh`;
             }
         }
         return label;

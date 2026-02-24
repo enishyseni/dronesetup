@@ -98,7 +98,7 @@ class ComponentAnalyzer {
                 }
             };
             
-            components.battery = batteryWeightMap[batteryType][batteryCapacity];
+            components.battery = (batteryWeightMap[batteryType] && batteryWeightMap[batteryType][batteryCapacity]) || 200;
             
             // Flight Controller weight
             components.fc = config.flightController === 'f4' ? 10 : (config.flightController === 'f7' ? 12 : 14);
@@ -202,7 +202,7 @@ class ComponentAnalyzer {
                 }
             };
             
-            components.battery = batteryWeightMap[batteryType][batteryCapacity];
+            components.battery = (batteryWeightMap[batteryType] && batteryWeightMap[batteryType][batteryCapacity]) || 200;
             
             // Electronics weight (FC, receiver, ESC, servos combined)
             components.electronics = 80;
@@ -427,7 +427,16 @@ class ComponentAnalyzer {
     getPropEfficiencyData(config) {
         const motorKv = parseInt(config.motorKv);
         const batteryVoltage = this.getBatteryVoltage(config);
-        const propSize = parseFloat(config.frameSize || config.wingspan);
+        
+        // Get prop size in inches - for fixed wing, estimate from wingspan
+        let propSize;
+        if (this.droneType === 'fpv') {
+            propSize = parseInt(config.frameSize.replace('inch', ''));
+        } else {
+            // Map wingspan to typical prop size in inches
+            const wingspanPropMap = { '800': 8, '1000': 9, '1500': 10, '2000': 11 };
+            propSize = wingspanPropMap[config.wingspan] || 9;
+        }
         
         // Calculate optimal RPM: Optimal RPM range = 2300 × prop diameter in inches
         const optimalRPM = 2300 * propSize;

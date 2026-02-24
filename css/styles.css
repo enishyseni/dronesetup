@@ -240,7 +240,9 @@ footer {
   font-size: 14px;
   cursor: pointer;
   opacity: 0.7;
-  transition: opacity 0.3s, border-bottom 0.3s;
+  transition:
+    opacity 0.3s,
+    border-bottom 0.3s;
 }
 
 .tab-btn.active {
@@ -647,10 +649,6 @@ footer {
 
 /* Responsive improvements for smaller sidebar */
 @media (max-width: 1200px) {
-  main {
-    grid-template-columns: 220px minmax(400px, 1fr) 220px;
-  }
-
   #apcPropeller.glass-select {
     font-size: 11px;
   }

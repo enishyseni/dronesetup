@@ -17,7 +17,6 @@ class DroneModelRenderer {
     init() {
         // Create scene
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x000000);
         this.scene.background = null; // Transparent background
         
         // Create camera
@@ -220,7 +219,7 @@ class DroneModelRenderer {
         // Add four arms in X configuration
         for (let i = 0; i < 4; i++) {
             const angle = (i * Math.PI) / 2 + Math.PI / 4;
-            const arm = createArm(angle, this.colorPalette[i % 4]);
+            const arm = createArm(angle);
             frameGroup.add(arm);
         }
         

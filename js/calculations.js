@@ -222,7 +222,6 @@ class DroneCalculator {
         
         // Nominal voltage per cell
         const cellVoltage = batteryType === 'lipo' ? 3.7 : 3.6;
-        const voltage = cellCount * cellVoltage;
         
         let avgCurrent;
 
@@ -608,53 +607,86 @@ class DroneCalculator {
     }
 
     updateAPCStatus(isEnabled) {
-        const statusElement = document.getElementById('apcStatus');
-        if (statusElement) {
-            statusElement.className = isEnabled ? 'apc-status apc-enabled' : 'apc-status apc-disabled';
-            statusElement.textContent = isEnabled ? 'APC Database: Connected' : 'APC Database: Offline';
-        }
+        // Status updates handled by main.js showAPCStatus function
+    }
+
+    /**
+     * Select optimal APC propeller (delegates to apcIntegration)
+     */
+    selectOptimalAPCPropeller(config) {
+        if (!this.apcEnabled || !this.apcIntegration) return null;
+        return this.apcIntegration.selectOptimalPropeller(config);
+    }
+
+    /**
+     * Get propeller efficiency via APC integration
+     */
+    getPropellerEfficiency(config) {
+        if (!this.apcEnabled || !this.apcIntegration) return null;
+        return this.apcIntegration.getEfficiency(config);
+    }
+
+    /**
+     * Get available APC propellers for current config
+     */
+    getAvailableAPCPropellers(config) {
+        if (!this.apcEnabled || !this.apcIntegration) return [];
+        return this.apcIntegration.getAvailablePropellers(config);
     }
 
     async calculateThrustWithAPC(config, throttlePercent = 100) {
         if (!this.apcEnabled || !this.apcIntegration) {
-            return this.calculateThrust(config, throttlePercent);
+            return this.calculateThrust(config);
         }
 
         try {
             const propeller = this.getSelectedPropeller(config);
             if (!propeller) {
-                return this.calculateThrust(config, throttlePercent);
+                return this.calculateThrust(config);
             }
 
-            const rpm = this.calculateRPM(config, throttlePercent);
-            const thrustData = await this.apcIntegration.calculateThrust(propeller, rpm);
+            const rpm = this.calculateMotorRPM(config) * (throttlePercent / 100);
+            const thrustData = this.apcIntegration.calculateThrustAPC(config);
             
-            return thrustData ? thrustData.thrust : this.calculateThrust(config, throttlePercent);
+            return thrustData !== null ? thrustData * 101.97 : this.calculateThrust(config);
         } catch (error) {
             console.error('Error calculating thrust with APC:', error);
-            return this.calculateThrust(config, throttlePercent);
+            return this.calculateThrust(config);
         }
     }
 
-    async calculatePowerWithAPC(config, throttlePercent = 100) {
+    calculatePowerWithAPC(config, throttlePercent = 100) {
         if (!this.apcEnabled || !this.apcIntegration) {
-            return this.calculatePower(config, throttlePercent);
+            return this.calculatePowerEstimate(config, throttlePercent);
         }
 
         try {
             const propeller = this.getSelectedPropeller(config);
             if (!propeller) {
-                return this.calculatePower(config, throttlePercent);
+                return this.calculatePowerEstimate(config, throttlePercent);
             }
 
-            const rpm = this.calculateRPM(config, throttlePercent);
-            const powerData = await this.apcIntegration.calculatePower(propeller, rpm);
+            const powerData = this.apcIntegration.calculatePowerAPC(config);
             
-            return powerData ? powerData.power : this.calculatePower(config, throttlePercent);
+            return powerData !== null ? powerData : this.calculatePowerEstimate(config, throttlePercent);
         } catch (error) {
             console.error('Error calculating power with APC:', error);
-            return this.calculatePower(config, throttlePercent);
+            return this.calculatePowerEstimate(config, throttlePercent);
         }
+    }
+
+    /**
+     * Estimate power consumption from config
+     */
+    calculatePowerEstimate(config, throttlePercent = 100) {
+        const batteryType = config.batteryType.split('-')[0];
+        const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
+        const cellVoltage = batteryType === 'lipo' ? 3.7 : 3.6;
+        const voltage = cellCount * cellVoltage;
+        const current = this.calculateHoverCurrent(config, 
+            this.droneType === 'fpv' ? this.calculateFPVDroneWeight(config) : this.calculateFixedWingWeight(config)
+        );
+        return voltage * current * (throttlePercent / 100);
     }
 
     getSelectedPropeller(config) {
@@ -739,6 +771,14 @@ class DroneCalculator {
                     } else {
                         return null; // Not applicable for FPV
                     }
+                    break;
+                case 'vtxPower':
+                    options = ['25', '200', '600', '1000'];
+                    break;
+                case 'all':
+                    // For 'all', default to batteryType comparison
+                    options = ['lipo-3s', 'lipo-4s', 'lipo-6s', 'liion-3s', 'liion-4s', 'liion-6s'];
+                    metric = 'batteryType';
                     break;
                 default:
                     return null;
@@ -954,7 +994,7 @@ class DroneCalculator {
      * Calculate thrust using the thrust coefficient formula
      * T = Ct × ρ × n² × D⁴ (where Ct is thrust coefficient, ρ is air density, n is rotational speed, D is prop diameter)
      */
-    calculateThrust(thrustCoefficient, airDensity, rotationalSpeed, propDiameter) {
+    calculateThrustPhysics(thrustCoefficient, airDensity, rotationalSpeed, propDiameter) {
         return thrustCoefficient * airDensity * Math.pow(rotationalSpeed, 2) * Math.pow(propDiameter, 4);
     }
     
@@ -983,10 +1023,10 @@ class DroneCalculator {
     }
     
     /**
-     * Calculate motor efficiency
+     * Calculate motor efficiency (physics formula)
      * η = (Mechanical power out ÷ Electrical power in) × 100%
      */
-    calculateMotorEfficiency(mechanicalPowerOut, electricalPowerIn) {
+    calculateMotorEfficiencyPhysics(mechanicalPowerOut, electricalPowerIn) {
         return (mechanicalPowerOut / electricalPowerIn) * 100;
     }
     
