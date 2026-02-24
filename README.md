@@ -4,6 +4,9 @@
 [![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/enishyseni/dronesetup)
 [![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-yellow.svg)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 
+
+![Drone Setup screenshot](fpvoptimizer.jpg)
+
 ## New Features in v1.1.0
 
 ### Enhanced Thermal Management
