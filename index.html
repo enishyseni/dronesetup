@@ -26,6 +26,34 @@
         </div>
       </header>
 
+      <!-- ─── PRE-BUILT CONFIGURATIONS LIBRARY ─── -->
+      <section class="glass-panel prebuilt-section" id="prebuiltSection">
+        <h2>Pre-Built Configurations</h2>
+        <div class="prebuilt-controls">
+          <div class="prebuilt-filters">
+            <select
+              id="prebuiltDifficulty"
+              class="glass-select prebuilt-filter-select"
+            >
+              <option value="all">All Levels</option>
+              <option value="beginner">Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+              <option value="expert">Expert</option>
+            </select>
+          </div>
+          <button
+            id="togglePrebuiltBtn"
+            class="toolkit-btn prebuilt-toggle-btn"
+          >
+            Hide Builds
+          </button>
+        </div>
+        <div class="prebuilt-grid" id="prebuiltGrid">
+          <!-- Populated by JS -->
+        </div>
+      </section>
+
       <div class="primary-row">
         <main>
           <div class="config-panel glass-panel">
@@ -393,205 +421,370 @@
           class="glass-panel advanced-toolkit"
           aria-label="Advanced toolkit"
         >
-        <h2>Advanced Optimization Toolkit</h2>
+          <h2>Advanced Optimization Toolkit</h2>
 
-        <div class="toolkit-grid">
-          <div class="toolkit-card">
-            <h3>Mission Profiles</h3>
-            <div class="toolkit-controls">
-              <label for="missionProfile">Preset</label>
-              <select id="missionProfile" class="glass-select">
-                <option value="freestyle">Freestyle FPV</option>
-                <option value="longrange">Long-Range FPV</option>
-                <option value="cinematic">Cinematic FPV</option>
-                <option value="trainer">Trainer FPV</option>
-                <option value="cruise_fw">Cruise Fixed Wing</option>
-                <option value="efficiency_fw">Efficiency Fixed Wing</option>
-                <option value="speed_fw">Speed Fixed Wing</option>
-              </select>
-              <button id="applyProfileBtn" class="toolkit-btn">
-                Apply Profile
-              </button>
-            </div>
-          </div>
-
-          <div class="toolkit-card">
-            <h3>Environment &amp; Battery Health</h3>
-            <div class="toolkit-controls two-col">
-              <label for="envAltitude">Altitude (m)</label>
-              <input
-                id="envAltitude"
-                type="number"
-                class="glass-input advanced-input"
-                min="0"
-                max="5000"
-                value="0"
-              />
-
-              <label for="envTemperature">Temperature (°C)</label>
-              <input
-                id="envTemperature"
-                type="number"
-                class="glass-input advanced-input"
-                min="-20"
-                max="50"
-                value="20"
-              />
-
-              <label for="envWind">Wind Speed (km/h)</label>
-              <input
-                id="envWind"
-                type="number"
-                class="glass-input advanced-input"
-                min="0"
-                max="80"
-                value="0"
-              />
-
-              <label for="batteryHealth">Battery Health (%)</label>
-              <input
-                id="batteryHealth"
-                type="number"
-                class="glass-input advanced-input"
-                min="50"
-                max="100"
-                value="100"
-              />
-
-              <label for="batteryCycles">Battery Cycles</label>
-              <input
-                id="batteryCycles"
-                type="number"
-                class="glass-input advanced-input"
-                min="0"
-                max="1000"
-                value="0"
-              />
-            </div>
-          </div>
-
-          <div class="toolkit-card">
-            <h3>Constraint Solver</h3>
-            <div class="toolkit-controls two-col">
-              <label for="targetFlightTime">Min Flight Time (min)</label>
-              <input
-                id="targetFlightTime"
-                type="number"
-                class="glass-input"
-                min="0"
-                value="10"
-              />
-
-              <label for="targetMaxWeight">Max Weight (g)</label>
-              <input
-                id="targetMaxWeight"
-                type="number"
-                class="glass-input"
-                min="0"
-                value="900"
-              />
-
-              <label for="targetMinRange">Min Range (m)</label>
-              <input
-                id="targetMinRange"
-                type="number"
-                class="glass-input"
-                min="0"
-                value="1000"
-              />
-
-              <label for="targetMinPayload">Min Payload (g)</label>
-              <input
-                id="targetMinPayload"
-                type="number"
-                class="glass-input"
-                min="0"
-                value="500"
-              />
-            </div>
-            <button id="solveConstraintsBtn" class="toolkit-btn">
-              Find Best Configuration
-            </button>
-            <div id="solverResult" class="solver-result" style="display: none">
-              <div class="solver-result-title">Best Match Found</div>
-              <div id="solverResultBody" class="solver-result-body"></div>
-            </div>
-          </div>
-
-          <div class="toolkit-card">
-            <h3>Cost &amp; BOM</h3>
-            <div id="bomTotal" class="toolkit-metric">Total Cost: $0.00</div>
-            <div id="costEfficiency" class="toolkit-metric">
-              Cost Efficiency: $0.00 / min
-            </div>
-            <ul id="bomList" class="toolkit-list"></ul>
-          </div>
-
-          <div class="toolkit-card">
-            <h3>Confidence Bands (Best / Typical / Worst)</h3>
-            <div class="confidence-grid">
-              <div class="confidence-row">
-                <span>Flight Time</span><span id="confFlightTime">-</span>
-              </div>
-              <div class="confidence-row">
-                <span>Max Speed</span><span id="confMaxSpeed">-</span>
-              </div>
-              <div class="confidence-row">
-                <span>Range</span><span id="confRange">-</span>
-              </div>
-              <div class="confidence-row">
-                <span>Payload</span><span id="confPayload">-</span>
+          <div class="toolkit-grid">
+            <div class="toolkit-card">
+              <h3>Mission Profiles</h3>
+              <div class="toolkit-controls">
+                <label for="missionProfile">Preset</label>
+                <select id="missionProfile" class="glass-select">
+                  <option value="freestyle">Freestyle FPV</option>
+                  <option value="longrange">Long-Range FPV</option>
+                  <option value="cinematic">Cinematic FPV</option>
+                  <option value="trainer">Trainer FPV</option>
+                  <option value="cruise_fw">Cruise Fixed Wing</option>
+                  <option value="efficiency_fw">Efficiency Fixed Wing</option>
+                  <option value="speed_fw">Speed Fixed Wing</option>
+                </select>
+                <button id="applyProfileBtn" class="toolkit-btn">
+                  Apply Profile
+                </button>
               </div>
             </div>
-          </div>
 
-          <div class="toolkit-card">
-            <h3>Safety Checks</h3>
-            <ul id="safetyChecks" class="toolkit-list"></ul>
-          </div>
+            <div class="toolkit-card">
+              <h3>Environment &amp; Battery Health</h3>
+              <div class="toolkit-controls two-col">
+                <label for="envAltitude">Altitude (m)</label>
+                <input
+                  id="envAltitude"
+                  type="number"
+                  class="glass-input advanced-input"
+                  min="0"
+                  max="5000"
+                  value="0"
+                />
 
-          <div class="toolkit-card toolkit-wide">
-            <h3>Comparison Snapshots</h3>
-            <div class="toolkit-controls two-col">
-              <label for="snapshotName">Snapshot Name</label>
-              <input
-                id="snapshotName"
-                type="text"
-                class="glass-input"
-                placeholder="e.g. Long-range test"
-              />
+                <label for="envTemperature">Temperature (°C)</label>
+                <input
+                  id="envTemperature"
+                  type="number"
+                  class="glass-input advanced-input"
+                  min="-20"
+                  max="50"
+                  value="20"
+                />
 
-              <label for="snapshotA">Compare A</label>
-              <select id="snapshotA" class="glass-select"></select>
+                <label for="envWind">Wind Speed (km/h)</label>
+                <input
+                  id="envWind"
+                  type="number"
+                  class="glass-input advanced-input"
+                  min="0"
+                  max="80"
+                  value="0"
+                />
 
-              <label for="snapshotB">Compare B</label>
-              <select id="snapshotB" class="glass-select"></select>
+                <label for="batteryHealth">Battery Health (%)</label>
+                <input
+                  id="batteryHealth"
+                  type="number"
+                  class="glass-input advanced-input"
+                  min="50"
+                  max="100"
+                  value="100"
+                />
+
+                <label for="batteryCycles">Battery Cycles</label>
+                <input
+                  id="batteryCycles"
+                  type="number"
+                  class="glass-input advanced-input"
+                  min="0"
+                  max="1000"
+                  value="0"
+                />
+              </div>
             </div>
-            <div class="toolkit-actions">
-              <button id="saveSnapshotBtn" class="toolkit-btn">
-                Save Snapshot
+
+            <div class="toolkit-card">
+              <h3>Constraint Solver</h3>
+              <div class="toolkit-controls two-col">
+                <label for="targetFlightTime">Min Flight Time (min)</label>
+                <input
+                  id="targetFlightTime"
+                  type="number"
+                  class="glass-input"
+                  min="0"
+                  value="10"
+                />
+
+                <label for="targetMaxWeight">Max Weight (g)</label>
+                <input
+                  id="targetMaxWeight"
+                  type="number"
+                  class="glass-input"
+                  min="0"
+                  value="900"
+                />
+
+                <label for="targetMinRange">Min Range (m)</label>
+                <input
+                  id="targetMinRange"
+                  type="number"
+                  class="glass-input"
+                  min="0"
+                  value="1000"
+                />
+
+                <label for="targetMinPayload">Min Payload (g)</label>
+                <input
+                  id="targetMinPayload"
+                  type="number"
+                  class="glass-input"
+                  min="0"
+                  value="500"
+                />
+              </div>
+              <button id="solveConstraintsBtn" class="toolkit-btn">
+                Find Best Configuration
               </button>
-              <button id="compareSnapshotsBtn" class="toolkit-btn">
-                Compare Snapshots
-              </button>
-              <button id="exportReportBtn" class="toolkit-btn">
-                Export JSON Report
-              </button>
+              <div
+                id="solverResult"
+                class="solver-result"
+                style="display: none"
+              >
+                <div class="solver-result-title">Best Match Found</div>
+                <div id="solverResultBody" class="solver-result-body"></div>
+              </div>
             </div>
-            <ul id="snapshotList" class="toolkit-list"></ul>
-            <div id="snapshotDiff" class="snapshot-diff">
-              No snapshot comparison yet.
-            </div>
-          </div>
 
-          <div class="toolkit-card toolkit-wide">
-            <h3>Sensitivity View</h3>
-            <div class="sensitivity-wrap">
-              <canvas id="sensitivityChart"></canvas>
+            <div class="toolkit-card">
+              <h3>Cost &amp; BOM</h3>
+              <div id="bomTotal" class="toolkit-metric">Total Cost: $0.00</div>
+              <div id="costEfficiency" class="toolkit-metric">
+                Cost Efficiency: $0.00 / min
+              </div>
+              <ul id="bomList" class="toolkit-list"></ul>
+            </div>
+
+            <div class="toolkit-card">
+              <h3>Confidence Bands (Best / Typical / Worst)</h3>
+              <div class="confidence-grid">
+                <div class="confidence-row">
+                  <span>Flight Time</span><span id="confFlightTime">-</span>
+                </div>
+                <div class="confidence-row">
+                  <span>Max Speed</span><span id="confMaxSpeed">-</span>
+                </div>
+                <div class="confidence-row">
+                  <span>Range</span><span id="confRange">-</span>
+                </div>
+                <div class="confidence-row">
+                  <span>Payload</span><span id="confPayload">-</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="toolkit-card">
+              <h3>Safety Checks</h3>
+              <ul id="safetyChecks" class="toolkit-list"></ul>
+            </div>
+
+            <div class="toolkit-card toolkit-wide">
+              <h3>Comparison Snapshots</h3>
+              <div class="toolkit-controls two-col">
+                <label for="snapshotName">Snapshot Name</label>
+                <input
+                  id="snapshotName"
+                  type="text"
+                  class="glass-input"
+                  placeholder="e.g. Long-range test"
+                />
+
+                <label for="snapshotA">Compare A</label>
+                <select id="snapshotA" class="glass-select"></select>
+
+                <label for="snapshotB">Compare B</label>
+                <select id="snapshotB" class="glass-select"></select>
+              </div>
+              <div class="toolkit-actions">
+                <button id="saveSnapshotBtn" class="toolkit-btn">
+                  Save Snapshot
+                </button>
+                <button id="compareSnapshotsBtn" class="toolkit-btn">
+                  Compare Snapshots
+                </button>
+                <button id="exportReportBtn" class="toolkit-btn">
+                  Export JSON Report
+                </button>
+              </div>
+              <ul id="snapshotList" class="toolkit-list"></ul>
+              <div id="snapshotDiff" class="snapshot-diff">
+                No snapshot comparison yet.
+              </div>
+            </div>
+
+            <div class="toolkit-card toolkit-wide">
+              <h3>Sensitivity View</h3>
+              <div class="sensitivity-wrap">
+                <canvas id="sensitivityChart"></canvas>
+              </div>
+            </div>
+
+            <!-- ─── COMPATIBILITY CHECKER ─── -->
+            <div class="toolkit-card toolkit-wide">
+              <h3>Component Compatibility Checker</h3>
+              <div id="compatStatus" class="compat-status compat-ok">
+                <span class="compat-badge">&#10003; All Clear</span>
+                <span class="compat-summary">No issues detected</span>
+              </div>
+              <ul id="compatIssues" class="toolkit-list compat-list"></ul>
+            </div>
+
+            <!-- ─── REGULATION CHECKER ─── -->
+            <div class="toolkit-card toolkit-wide">
+              <h3>Regulation &amp; Compliance</h3>
+              <div class="toolkit-controls two-col">
+                <label for="regulationRegion">Region</label>
+                <select id="regulationRegion" class="glass-select">
+                  <option value="us">United States (FAA)</option>
+                  <option value="eu">European Union (EASA)</option>
+                  <option value="uk">United Kingdom (CAA)</option>
+                  <option value="canada">Canada</option>
+                  <option value="australia">Australia (CASA)</option>
+                </select>
+              </div>
+              <div id="regulationResult" class="regulation-result">
+                <div class="reg-weight-class" id="regWeightClass">—</div>
+                <div class="reg-description" id="regDescription">
+                  Select a region to see requirements.
+                </div>
+                <div class="reg-details">
+                  <div class="reg-row">
+                    <span>250g Margin:</span><span id="regMargin">—</span>
+                  </div>
+                  <div class="reg-row">
+                    <span>Remote ID:</span><span id="regRemoteId">—</span>
+                  </div>
+                  <div class="reg-row">
+                    <span>Max Altitude:</span><span id="regMaxAlt">—</span>
+                  </div>
+                  <div class="reg-row">
+                    <span>License:</span><span id="regLicense">—</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ─── BOM EXPORT ─── -->
+            <div class="toolkit-card">
+              <h3>Manufacturing BOM Export</h3>
+              <p class="toolkit-metric">
+                Export a full manufacturing-ready bill of materials with
+                supplier links and batch pricing.
+              </p>
+              <div class="toolkit-actions">
+                <button id="exportBomCsvBtn" class="toolkit-btn">
+                  Export BOM (CSV)
+                </button>
+              </div>
+            </div>
+
+            <!-- ─── PID TUNING SIMULATOR ─── -->
+            <div class="toolkit-card toolkit-wide">
+              <h3>PID Tuning Simulator</h3>
+              <div class="pid-controls">
+                <div class="pid-sliders">
+                  <div class="pid-slider-group">
+                    <label>P Gain: <span id="pidPValue">3.5</span></label>
+                    <input
+                      type="range"
+                      id="pidPSlider"
+                      min="0.5"
+                      max="8"
+                      step="0.1"
+                      value="3.5"
+                      class="pid-range"
+                    />
+                  </div>
+                  <div class="pid-slider-group">
+                    <label>I Gain: <span id="pidIValue">0.035</span></label>
+                    <input
+                      type="range"
+                      id="pidISlider"
+                      min="0"
+                      max="0.15"
+                      step="0.005"
+                      value="0.035"
+                      class="pid-range"
+                    />
+                  </div>
+                  <div class="pid-slider-group">
+                    <label>D Gain: <span id="pidDValue">30</span></label>
+                    <input
+                      type="range"
+                      id="pidDSlider"
+                      min="0"
+                      max="80"
+                      step="1"
+                      value="30"
+                      class="pid-range"
+                    />
+                  </div>
+                </div>
+                <div class="pid-presets">
+                  <label>Presets:</label>
+                  <button
+                    class="toolkit-btn pid-preset-btn"
+                    data-preset="racing"
+                  >
+                    Racing
+                  </button>
+                  <button
+                    class="toolkit-btn pid-preset-btn"
+                    data-preset="freestyle"
+                  >
+                    Freestyle
+                  </button>
+                  <button
+                    class="toolkit-btn pid-preset-btn"
+                    data-preset="cinematic"
+                  >
+                    Cinematic
+                  </button>
+                  <button
+                    class="toolkit-btn pid-preset-btn"
+                    data-preset="default"
+                  >
+                    Default
+                  </button>
+                </div>
+              </div>
+              <div class="pid-chart-wrap">
+                <canvas id="pidChart"></canvas>
+              </div>
+              <div class="pid-metrics" id="pidMetrics">
+                <span>Overshoot: <strong id="pidOvershoot">—</strong></span>
+                <span>Rise Time: <strong id="pidRiseTime">—</strong></span>
+                <span>Settling: <strong id="pidSettling">—</strong></span>
+                <span
+                  >Oscillations: <strong id="pidOscillations">—</strong></span
+                >
+                <span>Status: <strong id="pidStable">—</strong></span>
+              </div>
+            </div>
+
+            <!-- ─── FLIGHT ENVELOPE ─── -->
+            <div class="toolkit-card toolkit-wide">
+              <h3>Flight Envelope</h3>
+              <div class="flight-env-wrap">
+                <canvas id="flightEnvelopeChart"></canvas>
+              </div>
+              <div class="flight-env-metrics" id="flightEnvMetrics">
+                <span
+                  >Max Speed (sea level):
+                  <strong id="envMaxSpeed">—</strong></span
+                >
+                <span>AUW: <strong id="envAUW">—</strong></span>
+                <span id="envStallLabel" style="display: none"
+                  >Stall Speed: <strong id="envStall">—</strong></span
+                >
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
       </div>
       <!-- /.primary-row -->
 
@@ -599,148 +792,145 @@
         class="glass-panel calculation-guide"
         aria-label="Calculation guide"
       >
-          <h2>Calculation Guide &amp; Correlations</h2>
+        <h2>Calculation Guide &amp; Correlations</h2>
 
-          <div class="guide-grid">
-            <div class="guide-card">
-              <h3>Configuration Inputs</h3>
-              <ul>
-                <li>
-                  <strong>Frame Size (FPV):</strong> Prop size proxy. Larger
-                  frames increase thrust potential, weight, and speed potential.
-                </li>
-                <li>
-                  <strong>Motor KV:</strong> RPM per volt. Higher KV increases
-                  speed and peak current draw, but usually reduces efficiency.
-                </li>
-                <li>
-                  <strong>Battery Chemistry:</strong> LiPo supports higher
-                  discharge; Li-Ion has better energy density but lower safe
-                  C-rate.
-                </li>
-                <li>
-                  <strong>Battery Capacity:</strong> Higher mAh increases energy
-                  and flight time, but also adds battery weight.
-                </li>
-                <li>
-                  <strong>Flight Controller:</strong> Affects electronics weight
-                  contribution.
-                </li>
-                <li>
-                  <strong>Camera:</strong> Changes payload weight and impacts
-                  total mass.
-                </li>
-                <li>
-                  <strong>VTX Power:</strong> Improves link range, increases
-                  power-system load and small weight overhead.
-                </li>
-                <li>
-                  <strong>Wingspan (Fixed Wing):</strong> Larger wings improve
-                  cruise efficiency but generally reduce top speed.
-                </li>
-                <li>
-                  <strong>Wing Type (Fixed Wing):</strong> Modifies
-                  drag/efficiency assumptions and therefore speed, current, and
-                  range behavior.
-                </li>
-                <li>
-                  <strong>Propeller Selection (APC):</strong> Auto/manual prop
-                  choice impacts thrust and power modeling when APC data is
-                  available.
-                </li>
-                <li>
-                  <strong>Analyze Impact By:</strong> Controls which parameter
-                  is swept in comparison charts.
-                </li>
-              </ul>
-            </div>
-
-            <div class="guide-card">
-              <h3>Calculated Outputs</h3>
-              <ul>
-                <li>
-                  <strong>Total Weight:</strong> Sum of frame/airframe,
-                  motor(s), battery, electronics, camera, VTX, and wiring
-                  assumptions.
-                </li>
-                <li>
-                  <strong>Estimated Flight Time:</strong> Derived from usable
-                  battery energy and average current demand.
-                </li>
-                <li>
-                  <strong>Payload Capacity:</strong> Estimated max safe takeoff
-                  mass minus current configuration mass.
-                </li>
-                <li>
-                  <strong>Max Speed:</strong> Function of KV, voltage (cell
-                  count), geometry (frame or wing), and chemistry power factor.
-                </li>
-                <li>
-                  <strong>Power-to-Weight:</strong> Estimated available power
-                  normalized by mass.
-                </li>
-                <li>
-                  <strong>Range (Line of Sight):</strong> Minimum of
-                  signal-limited range and time/speed-limited range.
-                </li>
-                <li>
-                  <strong>Battery Discharge Rate:</strong> Estimated burst
-                  current divided by battery Ah, shown as required C-rating.
-                </li>
-                <li>
-                  <strong>Current Draw (Hover/Cruise):</strong> FPV hover
-                  current or fixed-wing cruise current estimate.
-                </li>
-                <li>
-                  <strong>Component Impact Analysis:</strong> Highlights
-                  heaviest component, limiting factor, and best next
-                  improvement.
-                </li>
-              </ul>
-            </div>
-
-            <div class="guide-card correlations">
-              <h3>Key Correlations in This UI</h3>
-              <ul>
-                <li>
-                  <strong>Battery Capacity ↑</strong> → Flight Time ↑, Total
-                  Weight ↑, Payload Capacity ↓.
-                </li>
-                <li>
-                  <strong>Motor KV ↑</strong> → Max Speed ↑, Current Draw ↑,
-                  Flight Time ↓ (all else equal).
-                </li>
-                <li>
-                  <strong>Cell Count ↑ (3S/4S/6S)</strong> → Voltage ↑,
-                  Speed/Power potential ↑, often Current (A) at hover ↓ for same
-                  power.
-                </li>
-                <li>
-                  <strong>VTX Power ↑</strong> → Signal-based range ↑, but with
-                  slight weight/current penalties.
-                </li>
-                <li>
-                  <strong>Frame Size (FPV) ↑</strong> → Weight ↑ and speed
-                  potential ↑; prop disc area can improve hover efficiency
-                  trends.
-                </li>
-                <li>
-                  <strong>Wingspan (Fixed Wing) ↑</strong> → Cruise efficiency
-                  tendency ↑ but top-speed tendency ↓.
-                </li>
-                <li>
-                  <strong>Li-Ion vs LiPo:</strong> Li-Ion can extend endurance
-                  in lighter-load setups, while LiPo supports higher burst
-                  performance.
-                </li>
-                <li>
-                  <strong>Range is dual-limited:</strong> Better VTX helps only
-                  until endurance/speed becomes the limiting side.
-                </li>
-              </ul>
-            </div>
+        <div class="guide-grid">
+          <div class="guide-card">
+            <h3>Configuration Inputs</h3>
+            <ul>
+              <li>
+                <strong>Frame Size (FPV):</strong> Prop size proxy. Larger
+                frames increase thrust potential, weight, and speed potential.
+              </li>
+              <li>
+                <strong>Motor KV:</strong> RPM per volt. Higher KV increases
+                speed and peak current draw, but usually reduces efficiency.
+              </li>
+              <li>
+                <strong>Battery Chemistry:</strong> LiPo supports higher
+                discharge; Li-Ion has better energy density but lower safe
+                C-rate.
+              </li>
+              <li>
+                <strong>Battery Capacity:</strong> Higher mAh increases energy
+                and flight time, but also adds battery weight.
+              </li>
+              <li>
+                <strong>Flight Controller:</strong> Affects electronics weight
+                contribution.
+              </li>
+              <li>
+                <strong>Camera:</strong> Changes payload weight and impacts
+                total mass.
+              </li>
+              <li>
+                <strong>VTX Power:</strong> Improves link range, increases
+                power-system load and small weight overhead.
+              </li>
+              <li>
+                <strong>Wingspan (Fixed Wing):</strong> Larger wings improve
+                cruise efficiency but generally reduce top speed.
+              </li>
+              <li>
+                <strong>Wing Type (Fixed Wing):</strong> Modifies
+                drag/efficiency assumptions and therefore speed, current, and
+                range behavior.
+              </li>
+              <li>
+                <strong>Propeller Selection (APC):</strong> Auto/manual prop
+                choice impacts thrust and power modeling when APC data is
+                available.
+              </li>
+              <li>
+                <strong>Analyze Impact By:</strong> Controls which parameter is
+                swept in comparison charts.
+              </li>
+            </ul>
           </div>
-        </section>
+
+          <div class="guide-card">
+            <h3>Calculated Outputs</h3>
+            <ul>
+              <li>
+                <strong>Total Weight:</strong> Sum of frame/airframe, motor(s),
+                battery, electronics, camera, VTX, and wiring assumptions.
+              </li>
+              <li>
+                <strong>Estimated Flight Time:</strong> Derived from usable
+                battery energy and average current demand.
+              </li>
+              <li>
+                <strong>Payload Capacity:</strong> Estimated max safe takeoff
+                mass minus current configuration mass.
+              </li>
+              <li>
+                <strong>Max Speed:</strong> Function of KV, voltage (cell
+                count), geometry (frame or wing), and chemistry power factor.
+              </li>
+              <li>
+                <strong>Power-to-Weight:</strong> Estimated available power
+                normalized by mass.
+              </li>
+              <li>
+                <strong>Range (Line of Sight):</strong> Minimum of
+                signal-limited range and time/speed-limited range.
+              </li>
+              <li>
+                <strong>Battery Discharge Rate:</strong> Estimated burst current
+                divided by battery Ah, shown as required C-rating.
+              </li>
+              <li>
+                <strong>Current Draw (Hover/Cruise):</strong> FPV hover current
+                or fixed-wing cruise current estimate.
+              </li>
+              <li>
+                <strong>Component Impact Analysis:</strong> Highlights heaviest
+                component, limiting factor, and best next improvement.
+              </li>
+            </ul>
+          </div>
+
+          <div class="guide-card correlations">
+            <h3>Key Correlations in This UI</h3>
+            <ul>
+              <li>
+                <strong>Battery Capacity ↑</strong> → Flight Time ↑, Total
+                Weight ↑, Payload Capacity ↓.
+              </li>
+              <li>
+                <strong>Motor KV ↑</strong> → Max Speed ↑, Current Draw ↑,
+                Flight Time ↓ (all else equal).
+              </li>
+              <li>
+                <strong>Cell Count ↑ (3S/4S/6S)</strong> → Voltage ↑,
+                Speed/Power potential ↑, often Current (A) at hover ↓ for same
+                power.
+              </li>
+              <li>
+                <strong>VTX Power ↑</strong> → Signal-based range ↑, but with
+                slight weight/current penalties.
+              </li>
+              <li>
+                <strong>Frame Size (FPV) ↑</strong> → Weight ↑ and speed
+                potential ↑; prop disc area can improve hover efficiency trends.
+              </li>
+              <li>
+                <strong>Wingspan (Fixed Wing) ↑</strong> → Cruise efficiency
+                tendency ↑ but top-speed tendency ↓.
+              </li>
+              <li>
+                <strong>Li-Ion vs LiPo:</strong> Li-Ion can extend endurance in
+                lighter-load setups, while LiPo supports higher burst
+                performance.
+              </li>
+              <li>
+                <strong>Range is dual-limited:</strong> Better VTX helps only
+                until endurance/speed becomes the limiting side.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
 
       <footer class="glass-panel">
         <p>
@@ -749,6 +939,7 @@
       </footer>
     </div>
 
+    <script src="js/newFeatures.js"></script>
     <script src="js/apcIntegration.js"></script>
     <script src="js/calculations.js"></script>
     <script src="js/componentAnalysis.js"></script>

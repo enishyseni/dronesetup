@@ -951,3 +951,393 @@ footer {
     font-size: 10px;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NEW FEATURES — Pre-Built Configs, Compatibility, Regulation, PID, Envelope
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Pre-Built Configurations Library ─── */
+
+.prebuilt-section {
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.prebuilt-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.prebuilt-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.prebuilt-filter-select {
+  min-width: 120px;
+}
+
+.prebuilt-toggle-btn {
+  margin-left: auto;
+}
+
+.prebuilt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  transition:
+    max-height 0.4s ease,
+    opacity 0.3s ease;
+  overflow: hidden;
+}
+
+.prebuilt-grid.collapsed {
+  max-height: 0 !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.prebuilt-card {
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--glass-border);
+  border-radius: 5px;
+  padding: 14px;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    transform 0.15s,
+    box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.prebuilt-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 18px rgba(108, 99, 255, 0.25);
+}
+
+.prebuilt-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.prebuilt-card-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #a49cff;
+}
+
+.prebuilt-card-badge {
+  font-size: 0.68rem;
+  padding: 2px 7px;
+  border-radius: 10px;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.badge-beginner {
+  background: rgba(46, 213, 115, 0.25);
+  color: #2ed573;
+}
+.badge-intermediate {
+  background: rgba(255, 165, 2, 0.25);
+  color: #ffa502;
+}
+.badge-advanced {
+  background: rgba(255, 71, 87, 0.25);
+  color: #ff4757;
+}
+.badge-expert {
+  background: rgba(255, 56, 56, 0.3);
+  color: #ff3838;
+}
+
+.prebuilt-card-desc {
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.prebuilt-card-category {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: auto;
+}
+
+.prebuilt-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.prebuilt-tag {
+  font-size: 0.65rem;
+  background: rgba(108, 99, 255, 0.15);
+  color: rgba(164, 156, 255, 0.85);
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+/* ─── Compatibility Checker ─── */
+
+.compat-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 5px;
+  margin-bottom: 8px;
+  transition:
+    background 0.3s,
+    border-color 0.3s;
+}
+
+.compat-ok {
+  background: rgba(46, 213, 115, 0.12);
+  border: 1px solid rgba(46, 213, 115, 0.4);
+}
+
+.compat-warning {
+  background: rgba(255, 165, 2, 0.12);
+  border: 1px solid rgba(255, 165, 2, 0.4);
+}
+
+.compat-error {
+  background: rgba(255, 71, 87, 0.12);
+  border: 1px solid rgba(255, 71, 87, 0.4);
+}
+
+.compat-badge {
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.compat-ok .compat-badge {
+  color: #2ed573;
+}
+.compat-warning .compat-badge {
+  color: #ffa502;
+}
+.compat-error .compat-badge {
+  color: #ff4757;
+}
+
+.compat-summary {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.compat-list li {
+  font-size: 0.82rem;
+  margin-bottom: 6px;
+  line-height: 1.35;
+  padding: 4px 0;
+}
+
+.compat-issue-error {
+  color: #ff4757;
+  list-style-type: "✗ ";
+}
+
+.compat-issue-warning {
+  color: #ffa502;
+  list-style-type: "⚠ ";
+}
+
+/* ─── Regulation Checker ─── */
+
+.regulation-result {
+  margin-top: 10px;
+}
+
+.reg-weight-class {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #a49cff;
+  margin-bottom: 6px;
+}
+
+.reg-description {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 10px;
+}
+
+.reg-details {
+  display: grid;
+  gap: 5px;
+}
+
+.reg-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.83rem;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.reg-row span:first-child {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.reg-row span:last-child {
+  color: rgba(255, 255, 255, 0.9);
+  text-align: right;
+  max-width: 60%;
+}
+
+.reg-under250 {
+  color: #2ed573 !important;
+  font-weight: 500;
+}
+
+.reg-over250 {
+  color: #ff4757 !important;
+  font-weight: 500;
+}
+
+/* ─── PID Tuning Simulator ─── */
+
+.pid-controls {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.pid-sliders {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 200px;
+}
+
+.pid-slider-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pid-slider-group label {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.pid-slider-group label span {
+  color: #a49cff;
+  font-weight: 600;
+}
+
+.pid-range {
+  width: 100%;
+}
+
+.pid-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 110px;
+}
+
+.pid-presets label {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 2px;
+}
+
+.pid-preset-btn {
+  font-size: 0.78rem !important;
+  padding: 5px 8px !important;
+}
+
+.pid-chart-wrap {
+  height: 220px;
+  min-height: 200px;
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.pid-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.pid-metrics strong {
+  color: #a49cff;
+}
+
+.pid-stable-yes {
+  color: #2ed573 !important;
+}
+.pid-stable-no {
+  color: #ff4757 !important;
+}
+
+/* ─── Flight Envelope ─── */
+
+.flight-env-wrap {
+  height: 240px;
+  min-height: 220px;
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.flight-env-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.flight-env-metrics strong {
+  color: #a49cff;
+}
+
+/* ─── Responsive adjustments for new features ─── */
+
+@media (max-width: 950px) {
+  .prebuilt-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+
+  .pid-controls {
+    flex-direction: column;
+  }
+
+  .pid-presets {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .pid-chart-wrap {
+    height: 180px;
+    min-height: 160px;
+  }
+
+  .flight-env-wrap {
+    height: 200px;
+    min-height: 180px;
+  }
+
+  .pid-metrics,
+  .flight-env-metrics {
+    flex-direction: column;
+    gap: 6px;
+  }
+}

@@ -880,6 +880,267 @@ document.addEventListener('DOMContentLoaded', function() {
             showUserInfo('JSON report exported');
         });
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // NEW FEATURES INTEGRATION
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // --- Instances ---
+    const compatChecker = new CompatibilityChecker(calculator);
+    const pidSimulator = new PIDSimulator();
+    const flightEnvelope = new FlightEnvelope(calculator);
+
+    // --- 1. Pre-Built Configurations Library ---
+    function renderPrebuiltGrid() {
+        const grid = document.getElementById('prebuiltGrid');
+        if (!grid) return;
+
+        const difficultyFilter = document.getElementById('prebuiltDifficulty')?.value || 'all';
+        const builds = PreBuiltConfigs.filterByDifficulty(calculator.droneType, difficultyFilter);
+
+        grid.innerHTML = builds.map(b => {
+            const badgeClass = `badge-${b.difficulty.toLowerCase()}`;
+            const tags = b.tags.map(t => `<span class="prebuilt-tag">${t}</span>`).join('');
+            return `
+                <div class="prebuilt-card" data-build-id="${b.id}">
+                    <div class="prebuilt-card-header">
+                        <span class="prebuilt-card-name">${b.name}</span>
+                        <span class="prebuilt-card-badge ${badgeClass}">${b.difficulty}</span>
+                    </div>
+                    <div class="prebuilt-card-desc">${b.description}</div>
+                    <div class="prebuilt-card-category">${b.category}</div>
+                    <div class="prebuilt-card-tags">${tags}</div>
+                </div>`;
+        }).join('');
+
+        // Click handler for each card
+        grid.querySelectorAll('.prebuilt-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const buildId = this.dataset.buildId;
+                const build = PreBuiltConfigs.getById(buildId);
+                if (!build) return;
+
+                // If build requires a different drone type, toggle first
+                const isFPV = PreBuiltConfigs.fpv.some(b => b.id === buildId);
+                const shouldBeFixedWing = !isFPV;
+                if (droneTypeToggle.checked !== shouldBeFixedWing) {
+                    droneTypeToggle.checked = shouldBeFixedWing;
+                    toggleDroneType();
+                }
+
+                // Apply config
+                Object.entries(build.config).forEach(([key, value]) => {
+                    const el = document.getElementById(key);
+                    if (el) el.value = value;
+                });
+
+                syncSlidersToSelects();
+                updateResults();
+                droneCharts.updateCharts(getCurrentConfig(), getCompareMetric());
+                showUserInfo(`Loaded: ${build.name}`);
+            });
+        });
+    }
+
+    // Difficulty filter
+    const prebuiltDiffSelect = document.getElementById('prebuiltDifficulty');
+    if (prebuiltDiffSelect) {
+        prebuiltDiffSelect.addEventListener('change', renderPrebuiltGrid);
+    }
+
+    // Toggle visibility
+    const togglePrebuiltBtn = document.getElementById('togglePrebuiltBtn');
+    if (togglePrebuiltBtn) {
+        togglePrebuiltBtn.addEventListener('click', function() {
+            const grid = document.getElementById('prebuiltGrid');
+            if (!grid) return;
+            const collapsed = grid.classList.toggle('collapsed');
+            this.textContent = collapsed ? 'Show Builds' : 'Hide Builds';
+        });
+    }
+
+    // --- 2. Compatibility Checker ---
+    function updateCompatibility() {
+        const config = getCurrentConfig();
+        const result = compatChecker.check(config);
+
+        const statusEl = document.getElementById('compatStatus');
+        const issuesEl = document.getElementById('compatIssues');
+        if (!statusEl || !issuesEl) return;
+
+        // Update status badge
+        statusEl.className = `compat-status compat-${result.status}`;
+        const badge = statusEl.querySelector('.compat-badge');
+        const summary = statusEl.querySelector('.compat-summary');
+
+        if (result.status === 'ok') {
+            badge.innerHTML = '&#10003; All Clear';
+            summary.textContent = 'No compatibility issues detected.';
+        } else if (result.status === 'warning') {
+            badge.innerHTML = `&#9888; ${result.warningCount} Warning${result.warningCount > 1 ? 's' : ''}`;
+            summary.textContent = 'Review recommended before building.';
+        } else {
+            badge.innerHTML = `&#10007; ${result.errorCount} Error${result.errorCount > 1 ? 's' : ''}, ${result.warningCount} Warning${result.warningCount > 1 ? 's' : ''}`;
+            summary.textContent = 'Critical incompatibilities found!';
+        }
+
+        // Render issues
+        if (result.issues.length === 0) {
+            issuesEl.innerHTML = '<li style="color: rgba(46,213,115,0.8);">All components are compatible.</li>';
+        } else {
+            issuesEl.innerHTML = result.issues.map(issue => {
+                const cls = issue.severity === 'error' ? 'compat-issue-error' : 'compat-issue-warning';
+                return `<li class="${cls}"><strong>${issue.component}:</strong> ${issue.message}</li>`;
+            }).join('');
+        }
+    }
+
+    // --- 3. Regulation Checker ---
+    function updateRegulation() {
+        const region = document.getElementById('regulationRegion')?.value || 'us';
+        const config = getCurrentConfig();
+        const totalWeight = calculator.droneType === 'fpv'
+            ? calculator.calculateFPVDroneWeight(config)
+            : calculator.calculateFixedWingWeight(config);
+
+        const result = RegulationChecker.check(region, totalWeight);
+        if (!result) return;
+
+        const weightClassEl = document.getElementById('regWeightClass');
+        const descEl = document.getElementById('regDescription');
+        const marginEl = document.getElementById('regMargin');
+        const remoteIdEl = document.getElementById('regRemoteId');
+        const maxAltEl = document.getElementById('regMaxAlt');
+        const licenseEl = document.getElementById('regLicense');
+
+        if (weightClassEl) weightClassEl.textContent = `${result.weightClass} — ${result.region}`;
+        if (descEl) descEl.textContent = result.description;
+        if (marginEl) {
+            if (result.isUnder250g) {
+                marginEl.textContent = `${result.marginTo250g.toFixed(0)}g under 250g`;
+                marginEl.className = 'reg-under250';
+            } else {
+                marginEl.textContent = `${Math.abs(result.marginTo250g).toFixed(0)}g OVER 250g`;
+                marginEl.className = 'reg-over250';
+            }
+        }
+        if (remoteIdEl) remoteIdEl.textContent = result.remoteId;
+        if (maxAltEl) maxAltEl.textContent = result.maxAltitude;
+        if (licenseEl) licenseEl.textContent = result.license;
+    }
+
+    const regionSelect = document.getElementById('regulationRegion');
+    if (regionSelect) {
+        regionSelect.addEventListener('change', updateRegulation);
+    }
+
+    // --- 4. BOM Export ---
+    const exportBomCsvBtn = document.getElementById('exportBomCsvBtn');
+    if (exportBomCsvBtn) {
+        exportBomCsvBtn.addEventListener('click', function() {
+            const config = getCurrentConfig();
+            const totalWeight = calculator.droneType === 'fpv'
+                ? calculator.calculateFPVDroneWeight(config)
+                : calculator.calculateFixedWingWeight(config);
+            const breakdown = getCostBreakdown(config);
+            const csv = BOMExporter.generateCSV(breakdown.items, config, calculator.droneType, totalWeight);
+            BOMExporter.downloadCSV(csv);
+            showUserInfo('BOM exported as CSV');
+        });
+    }
+
+    // --- 5. PID Tuning Simulator ---
+    function updatePIDSimulator() {
+        const P = parseFloat(document.getElementById('pidPSlider')?.value || '3.5');
+        const I = parseFloat(document.getElementById('pidISlider')?.value || '0.035');
+        const D = parseFloat(document.getElementById('pidDSlider')?.value || '30');
+
+        // Update value labels
+        const pVal = document.getElementById('pidPValue');
+        const iVal = document.getElementById('pidIValue');
+        const dVal = document.getElementById('pidDValue');
+        if (pVal) pVal.textContent = P.toFixed(1);
+        if (iVal) iVal.textContent = I.toFixed(3);
+        if (dVal) dVal.textContent = D.toFixed(0);
+
+        const metrics = pidSimulator.renderChart('pidChart', P, I, D);
+        if (!metrics) return;
+
+        const ovEl = document.getElementById('pidOvershoot');
+        const rtEl = document.getElementById('pidRiseTime');
+        const stEl = document.getElementById('pidSettling');
+        const osEl = document.getElementById('pidOscillations');
+        const stabEl = document.getElementById('pidStable');
+
+        if (ovEl) ovEl.textContent = `${metrics.overshoot}%`;
+        if (rtEl) rtEl.textContent = `${metrics.riseTime} ms`;
+        if (stEl) stEl.textContent = `${metrics.settlingTime} ms`;
+        if (osEl) osEl.textContent = metrics.oscillations;
+        if (stabEl) {
+            stabEl.textContent = metrics.stable ? 'Stable' : 'Unstable';
+            stabEl.className = metrics.stable ? 'pid-stable-yes' : 'pid-stable-no';
+        }
+    }
+
+    // PID slider listeners
+    ['pidPSlider', 'pidISlider', 'pidDSlider'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', updatePIDSimulator);
+    });
+
+    // PID preset buttons
+    document.querySelectorAll('.pid-preset-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const presetId = this.dataset.preset;
+            const preset = pidSimulator.presets[presetId];
+            if (!preset) return;
+
+            const pSlider = document.getElementById('pidPSlider');
+            const iSlider = document.getElementById('pidISlider');
+            const dSlider = document.getElementById('pidDSlider');
+            if (pSlider) pSlider.value = preset.P;
+            if (iSlider) iSlider.value = preset.I;
+            if (dSlider) dSlider.value = preset.D;
+
+            updatePIDSimulator();
+        });
+    });
+
+    // --- 6. Flight Envelope ---
+    function updateFlightEnvelope() {
+        const config = getCurrentConfig();
+        const data = flightEnvelope.renderChart('flightEnvelopeChart', config);
+        if (!data) return;
+
+        const maxSpeedEl = document.getElementById('envMaxSpeed');
+        const auwEl = document.getElementById('envAUW');
+        const stallEl = document.getElementById('envStall');
+        const stallLabel = document.getElementById('envStallLabel');
+
+        if (maxSpeedEl) maxSpeedEl.textContent = `${data.maxSpeedSea.toFixed(1)} km/h`;
+        if (auwEl) auwEl.textContent = `${data.totalWeight.toFixed(0)}g`;
+
+        if (data.stallSpeed !== null) {
+            if (stallLabel) stallLabel.style.display = '';
+            if (stallEl) stallEl.textContent = `${data.stallSpeed.toFixed(1)} km/h`;
+        } else {
+            if (stallLabel) stallLabel.style.display = 'none';
+        }
+    }
+
+    // --- Centralized new-features update function ---
+    function updateNewFeatures() {
+        updateCompatibility();
+        updateRegulation();
+        updateFlightEnvelope();
+    }
+
+    // Patch the existing updateResults to also trigger new features
+    const _originalUpdateResults = updateResults;
+    updateResults = function() {
+        _originalUpdateResults.call(this);
+        try { updateNewFeatures(); } catch (e) { console.error('New features update error:', e); }
+    };
     
     // Event listener for drone type toggle
     droneTypeToggle.addEventListener('change', toggleDroneType);
@@ -990,6 +1251,15 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Initial update of metrics
         updateResults();
+
+        // ─── Initialize new features ───
+        renderPrebuiltGrid();
+        updatePIDSimulator();
+
+        // Re-render pre-built grid when drone type changes
+        droneTypeToggle.addEventListener('change', function() {
+            setTimeout(renderPrebuiltGrid, 50);
+        });
         
         // Initialize APC Integration Framework
         calculator.initializeAPC().then((success) => {
