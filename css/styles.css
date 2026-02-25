@@ -274,8 +274,8 @@ h2 {
 }
 
 .primary-row .advanced-toolkit {
-  flex: 0 0 480px;
-  width: 480px;
+  flex: 0 0 634px;
+  width: 634px;
   max-height: 920px;
   overflow-y: auto;
   margin-bottom: 0;
@@ -615,8 +615,8 @@ footer {
   }
 
   .primary-row .advanced-toolkit {
-    flex: 0 0 380px;
-    width: 380px;
+    flex: 0 0 502px;
+    width: 502px;
   }
 
   .chart-container {
