@@ -657,11 +657,36 @@ class DroneCalculator {
     }
 
     /**
-     * Get available APC propellers for current config
+     * Get compatible propeller diameter range for a given frame/wingspan
+     */
+    getCompatiblePropRange(config) {
+        if (this.droneType === 'fpv') {
+            const ranges = {
+                '3inch':  { min: 2.5, max: 3.5 },
+                '5inch':  { min: 4.5, max: 5.5 },
+                '7inch':  { min: 6.0, max: 7.5 },
+                '10inch': { min: 8.0, max: 10.5 }
+            };
+            return ranges[config.frameSize] || ranges['5inch'];
+        } else {
+            const ranges = {
+                '800':  { min: 6, max: 10 },
+                '1000': { min: 7, max: 11 },
+                '1500': { min: 8, max: 13 },
+                '2000': { min: 9, max: 14 }
+            };
+            return ranges[config.wingspan] || ranges['1000'];
+        }
+    }
+
+    /**
+     * Get available APC propellers for current config (filtered by compatibility)
      */
     getAvailableAPCPropellers(config) {
         if (!this.apcEnabled || !this.apcIntegration) return [];
-        return this.apcIntegration.getAvailablePropellers(config);
+        const range = this.getCompatiblePropRange(config);
+        const all = this.apcIntegration.database.getAllPropellers();
+        return all.filter(p => p.diameter >= range.min && p.diameter <= range.max);
     }
 
     async calculateThrustWithAPC(config, throttlePercent = 100) {
@@ -675,9 +700,15 @@ class DroneCalculator {
                 return this.calculateThrust(config);
             }
 
+            // Set the selected propeller in the integration so it uses this prop
+            this.apcIntegration.selectedPropeller = propeller.id || propeller;
+
             const rpm = this.calculateMotorRPM(config) * (throttlePercent / 100);
-            const thrustData = this.apcIntegration.calculateThrustAPC(config);
+            const thrustData = this.apcIntegration.database.interpolateThrust(
+                this.apcIntegration.selectedPropeller, rpm, 0
+            );
             
+            // thrustData is in Newtons, convert to grams (1N ≈ 101.97g)
             return thrustData !== null ? thrustData * 101.97 : this.calculateThrust(config);
         } catch (error) {
             console.error('Error calculating thrust with APC:', error);
@@ -696,7 +727,12 @@ class DroneCalculator {
                 return this.calculatePowerEstimate(config, throttlePercent);
             }
 
-            const powerData = this.apcIntegration.calculatePowerAPC(config);
+            this.apcIntegration.selectedPropeller = propeller.id || propeller;
+
+            const rpm = this.calculateMotorRPM(config) * (throttlePercent / 100);
+            const powerData = this.apcIntegration.database.interpolatePower(
+                this.apcIntegration.selectedPropeller, rpm, 0
+            );
             
             return powerData !== null ? powerData : this.calculatePowerEstimate(config, throttlePercent);
         } catch (error) {

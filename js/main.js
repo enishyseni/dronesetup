@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
             ? calculator.calculateFPVDroneWeight(config)
             : calculator.calculateFixedWingWeight(config);
 
-        return {
+        const baseMetrics = {
             totalWeight,
             flightTime: calculator.calculateFlightTime(config, totalWeight),
             payloadCapacity: calculator.calculatePayloadCapacity(config, totalWeight),
@@ -124,8 +124,71 @@ document.addEventListener('DOMContentLoaded', function() {
             range: calculator.calculateRange(config),
             hoverCurrent: calculator.calculateHoverCurrent(config, totalWeight),
             powerToWeight: parseNumberFromMetric(calculator.calculatePowerToWeightRatio(config, totalWeight)),
-            dischargeRate: parseNumberFromMetric(calculator.calculateBatteryDischargeRate(config, totalWeight))
+            dischargeRate: parseNumberFromMetric(calculator.calculateBatteryDischargeRate(config, totalWeight)),
+            apcActive: false,
+            apcPropId: null
         };
+
+        // Enhance with APC data when available
+        if (calculator.apcEnabled && calculator.apcIntegration) {
+            try {
+                const selectedProp = calculator.getSelectedPropeller(config);
+                if (selectedProp) {
+                    const propId = selectedProp.id || selectedProp;
+                    calculator.apcIntegration.selectedPropeller = propId;
+                    const rpm = calculator.calculateMotorRPM(config);
+                    const db = calculator.apcIntegration.database;
+
+                    const apcThrust_N = db.interpolateThrust(propId, rpm, 0);
+                    const apcPower_W = db.interpolatePower(propId, rpm, 0);
+
+                    if (apcThrust_N !== null && apcPower_W !== null) {
+                        const apcThrustPerMotor_g = apcThrust_N * 101.97; // N -> grams
+                        const numMotors = calculator.droneType === 'fpv' ? 4 : 1;
+                        const totalThrust_g = apcThrustPerMotor_g * numMotors;
+
+                        // Refine payload using APC thrust data
+                        // Safe flight requires at least 2:1 thrust-to-weight
+                        const maxTakeoffWeight = totalThrust_g / 2;
+                        baseMetrics.payloadCapacity = parseFloat(Math.max(0, maxTakeoffWeight - totalWeight).toFixed(2));
+
+                        // Refine hover current using APC power data
+                        // At hover each motor produces weight/numMotors grams of thrust
+                        const hoverThrustPerMotor_g = totalWeight / numMotors;
+                        const hoverThrustPerMotor_N = hoverThrustPerMotor_g / 101.97;
+                        const hoverRpm = (typeof db.findRPMForThrust === 'function')
+                            ? db.findRPMForThrust(propId, hoverThrustPerMotor_N, 0)
+                            : null;
+
+                        if (hoverRpm !== null) {
+                            const hoverPower_W = db.interpolatePower(propId, hoverRpm, 0);
+                            if (hoverPower_W !== null && hoverPower_W > 0) {
+                                const batteryType = config.batteryType.split('-')[0];
+                                const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
+                                const cellVoltage = batteryType === 'lipo' ? 3.7 : 3.6;
+                                const voltage = cellCount * cellVoltage;
+                                const hoverCurrentTotal = (hoverPower_W * numMotors) / voltage;
+                                baseMetrics.hoverCurrent = parseFloat(hoverCurrentTotal.toFixed(2));
+
+                                // Refine flight time from APC hover current
+                                const capacityAh = parseInt(config.batteryCapacity) / 1000;
+                                const dischargeSafety = batteryType === 'lipo' ? 0.8 : 0.9;
+                                const energyDensityFactor = batteryType === 'lipo' ? 1.0 : 1.3;
+                                const apcFlightTime = (capacityAh / hoverCurrentTotal) * 60 * dischargeSafety * energyDensityFactor;
+                                baseMetrics.flightTime = parseFloat(Math.max(Math.min(apcFlightTime, 45), 2).toFixed(2));
+                            }
+                        }
+
+                        baseMetrics.apcActive = true;
+                        baseMetrics.apcPropId = propId;
+                    }
+                }
+            } catch (apcError) {
+                console.warn('APC enhancement failed, using base calculations:', apcError);
+            }
+        }
+
+        return baseMetrics;
     }
 
     function applyOperationalAdjustments(baseMetrics) {
@@ -651,6 +714,19 @@ document.addEventListener('DOMContentLoaded', function() {
             safelyUpdateElementText('payloadCapacity', `${metrics.payloadCapacity}`);
             safelyUpdateElementText('dischargeRate', `${metrics.dischargeRate}`);
             safelyUpdateElementText('hoverCurrent', `${metrics.hoverCurrent}`);
+
+            // Show APC propeller being used in status indicator
+            if (rawMetrics.apcActive && rawMetrics.apcPropId) {
+                const statusText = document.querySelector('#apcStatus .status-text');
+                if (statusText) {
+                    statusText.textContent = `APC Active: ${rawMetrics.apcPropId}`;
+                }
+            } else if (calculator.apcEnabled) {
+                const statusText = document.querySelector('#apcStatus .status-text');
+                if (statusText) {
+                    statusText.textContent = 'APC Database Active';
+                }
+            }
             
             // Update advanced metrics only if enabled in the UI
             if (document.querySelector('.advanced-metrics')) {
@@ -687,8 +763,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const rpm = calculator.calculateMotorRPM(config);
         safelyUpdateElementText('motorRPM', `${rpm.toFixed(2)} RPM`);
         
-        // Calculate thrust
-        const thrust = calculator.calculateThrust(config);
+        // Calculate thrust - use APC-enhanced data when available
+        let thrust;
+        if (calculator.apcEnabled && calculator.apcIntegration) {
+            const apcThrust = calculator.calculateThrustWithAPC(config);
+            // calculateThrustWithAPC may return a promise, handle sync
+            thrust = (apcThrust instanceof Promise) ? calculator.calculateThrust(config) : apcThrust;
+        } else {
+            thrust = calculator.calculateThrust(config);
+        }
         safelyUpdateElementText('motorThrust', `${thrust.toFixed(2)}g`);
         
         // Calculate motor efficiency
@@ -722,6 +805,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update sliders for the current drone type
         updateSlidersForDroneType();
+
+        // Re-filter APC propeller list for the new drone type
+        updateAPCPropellerList();
         
         updateResults();
         droneCharts.updateCharts(getCurrentConfig(), getCompareMetric());
@@ -823,6 +909,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (slider) {
                 const valueIndex = sliderConfigMap[this.id].indexOf(this.value);
                 slider.value = valueIndex >= 0 ? valueIndex : 0;
+            }
+            
+            // Re-filter APC propeller list when frame size or wingspan changes
+            if (this.id === 'frameSize' || this.id === 'wingspan') {
+                updateAPCPropellerList();
             }
             
             updateResults();
@@ -1205,19 +1296,63 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         try {
-            const propellers = calculator.apcIntegration.database.getAllPropellers();
-            apcPropellerSelect.innerHTML = '<option value="">Select Propeller...</option>';
+            const config = getCurrentConfig();
+
+            // Compute the compatible diameter range for the current frame/wingspan
+            const droneType = calculator.droneType;
+            let range;
+            if (droneType === 'fpv') {
+                const fpvRanges = {
+                    '3inch':  { min: 2.5, max: 3.5 },
+                    '5inch':  { min: 4.5, max: 5.5 },
+                    '7inch':  { min: 6.0, max: 7.5 },
+                    '10inch': { min: 8.0, max: 10.5 }
+                };
+                range = fpvRanges[config.frameSize] || fpvRanges['5inch'];
+            } else {
+                const fwRanges = {
+                    '800':  { min: 6, max: 10 },
+                    '1000': { min: 7, max: 11 },
+                    '1500': { min: 8, max: 13 },
+                    '2000': { min: 9, max: 14 }
+                };
+                range = fwRanges[config.wingspan] || fwRanges['1000'];
+            }
+
+            // Filter propellers by compatibility (use calculator method if available, else inline)
+            let propellers;
+            if (typeof calculator.getAvailableAPCPropellers === 'function') {
+                propellers = calculator.getAvailableAPCPropellers(config);
+            } else {
+                const all = calculator.apcIntegration.database.getAllPropellers();
+                propellers = all.filter(p => p.diameter >= range.min && p.diameter <= range.max);
+            }
+
+            const previousValue = apcPropellerSelect.value;
+            apcPropellerSelect.innerHTML = `<option value="">Select Propeller (${range.min}"–${range.max}")...</option>`;
             
             propellers.forEach(prop => {
                 const option = document.createElement('option');
                 option.value = prop.model;
-                // More compact format for better sidebar fit
                 option.textContent = `${prop.diameter}"×${prop.pitch}" ${prop.model}`;
-                option.title = `${prop.diameter}" × ${prop.pitch}" - ${prop.model} (${prop.dataPointCount} data points)`; // Full info in tooltip
+                option.title = `${prop.diameter}" × ${prop.pitch}" - ${prop.model} (${prop.dataPointCount} data points)`;
                 apcPropellerSelect.appendChild(option);
             });
+
+            // Restore previous selection if still compatible
+            if (previousValue) {
+                const stillValid = propellers.some(p => p.model === previousValue);
+                if (stillValid) {
+                    apcPropellerSelect.value = previousValue;
+                } else {
+                    apcPropellerSelect.value = '';
+                    // Recalculate since the selected propeller is no longer valid
+                    updateResults();
+                    droneCharts.updateCharts(getCurrentConfig(), getCompareMetric());
+                }
+            }
             
-            console.log(`Loaded ${propellers.length} APC propellers`);
+            console.log(`Loaded ${propellers.length} compatible APC propellers (${range.min}"–${range.max}")`);
         } catch (error) {
             console.error('Error updating APC propeller list:', error);
             apcPropellerSelect.innerHTML = '<option value="">Error loading propellers</option>';
