@@ -86,11 +86,9 @@ class DroneCharts {
                 const tabId = button.getAttribute('data-tab') + '-tab';
                 document.getElementById(tabId).classList.add('active');
                 
-                // Create charts for this tab if they haven't been created yet
+                // Create charts for this tab — they read the now-visible
+                // container dimensions correctly, so no extra resize needed.
                 this.createChartsForActiveTab(tabId);
-                
-                // Resize charts to fit new container
-                setTimeout(() => this.handleResize(), 100);
             });
         });
     }
@@ -1307,8 +1305,5 @@ class DroneCharts {
         document.getElementById('heaviestComponent').textContent = analysis.heaviestComponent;
         document.getElementById('limitingFactor').textContent = analysis.limitingFactor;
         document.getElementById('suggestedImprovement').textContent = analysis.suggestedImprovement;
-        
-        // Force layout update for charts
-        setTimeout(() => this.handleResize(), 100);
     }
 }

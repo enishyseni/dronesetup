@@ -764,19 +764,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Add a method to force redraw of all charts
     function forceChartRedraw() {
-        // Get all chart canvases
-        const chartCanvases = document.querySelectorAll('canvas[id$="Chart"]');
-        console.log(`Found ${chartCanvases.length} chart canvases to redraw`);
-        
-        chartCanvases.forEach(canvas => {
-            // Force a reflow/repaint of the canvas
-            canvas.style.display = 'none';
-            // Trigger reflow
-            void canvas.offsetHeight;
-            canvas.style.display = 'block';
+        // Resize all active Chart.js instances so they re-read their container
+        // dimensions.  Do NOT toggle display:none — that collapses the container
+        // and causes Chart.js to read 0-height, progressively shrinking charts.
+        Object.values(droneCharts.charts).forEach(chart => {
+            if (chart) {
+                try { chart.resize(); } catch (_) { /* chart not attached */ }
+            }
         });
         
-        // After forcing reflow, update all charts with current config
+        // Then update all charts with current config
         const config = getCurrentConfig();
         droneCharts.updateCharts(config, null);
     }
