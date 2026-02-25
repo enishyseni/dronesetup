@@ -4,8 +4,7 @@
 [![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/enishyseni/dronesetup)
 [![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-yellow.svg)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 
-
-![Drone Setup screenshot](fpvoptimizer.jpg)
+![Drone Setup screenshot](droneconfig.png)
 
 ## New Features in v1.1.0
 
@@ -309,7 +308,6 @@ DroneSetup is an advanced drone configuration platform that combines engineering
 #### Battery System Analysis
 
 - **LiPo vs Li-Ion Characteristics**:
-
   - **LiPo**: Higher discharge rates (up to 100C), lighter weight
   - **Li-Ion**: Higher energy density, longer cycle life
 
@@ -340,7 +338,6 @@ Temperature Rise = Power Loss × Thermal Resistance (°C)
 #### Fixed-Wing Specific Analysis
 
 - **Wing Loading**: Weight ÷ Wing Area
-
   - Low loading (<30 oz/ft²): Better slow-speed handling
   - High loading (>50 oz/ft²): Higher speeds, wind penetration
 

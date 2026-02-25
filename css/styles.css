@@ -21,6 +21,7 @@
 }
 
 body {
+  zoom: 75%;
   font-family: "Roboto", sans-serif;
   background: linear-gradient(
     135deg,
