@@ -1159,6 +1159,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 await updateAPCPropellerList();
                 showAPCStatus(true);
                 console.log('APC Integration ready');
+                showUserInfo('Enhanced APC propeller calculations available');
+                
+                // Refresh metrics and charts with APC data
+                updateResults();
+                droneCharts.updateCharts(getCurrentConfig(), getCompareMetric());
             } else {
                 showAPCStatus(false);
                 console.warn('APC Integration failed to initialize');
@@ -1262,31 +1267,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Initialize APC Integration Framework
-        calculator.initializeAPC().then((success) => {
-            if (success) {
-                console.log('APC Integration Framework ready');
-                showUserInfo('Enhanced APC propeller calculations available');
-                
-                // Show APC status indicator
-                const apcStatus = document.getElementById('apcStatus');
-                if (apcStatus) {
-                    apcStatus.style.display = 'block';
-                }
-                
-                // Update propeller list if manual selection is active
-                const propellerType = document.getElementById('propellerType');
-                if (propellerType && propellerType.value === 'manual') {
-                    updateAPCPropellerList();
-                }
-                
-                // Refresh metrics and charts with APC data
-                updateResults();
-                droneCharts.updateCharts(getCurrentConfig(), getCompareMetric());
-                
-            } else {
-                console.log('APC data not available - using simplified calculations');
-            }
-        }).catch(() => {
+        initializeAPCIntegration().catch(() => {
             console.log('APC data not available - using simplified calculations');
         });
         
