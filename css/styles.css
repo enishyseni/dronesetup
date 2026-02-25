@@ -30,12 +30,12 @@ body {
   );
   min-height: 100vh;
   color: var(--text);
-  padding: 16px;
+  padding: 8px;
 }
 
 .container {
-  max-width: 1900px;
-  width: 100%;
+  max-width: 90%;
+  width: 90%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -123,19 +123,22 @@ input:checked + .slider:before {
 .primary-row {
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 16px;
   margin-bottom: 24px;
   width: 100%;
+  height: 1017px;
 }
 
 main {
   display: grid;
-  grid-template-columns: 0.67fr 1.6fr 0.77fr;
+  grid-template-columns: 0.54fr 1.17fr 0.62fr;
+  grid-template-rows: 1fr;
   gap: 16px;
   margin-bottom: 0;
   flex: 1 1 auto;
   min-width: 0;
+  height: 100%;
 }
 
 .glass-panel {
@@ -154,6 +157,8 @@ main {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  height: 100%;
+  overflow-y: auto;
 }
 
 h2 {
@@ -192,7 +197,7 @@ h2 {
 .visualization {
   display: flex;
   flex-direction: column;
-  min-height: 580px;
+  height: 100%;
 }
 
 .chart-container {
@@ -210,7 +215,7 @@ h2 {
   border-radius: 10px;
   padding: 8px;
   position: relative;
-  min-height: 180px;
+  min-height: 144px;
   height: 100%;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
@@ -274,9 +279,10 @@ h2 {
 }
 
 .primary-row .advanced-toolkit {
-  flex: 0 0 634px;
-  width: 634px;
-  max-height: 920px;
+  flex: 0 0 666px;
+  width: 666px;
+  max-height: none;
+  height: auto;
   overflow-y: auto;
   margin-bottom: 0;
 }
@@ -421,8 +427,8 @@ h2 {
 }
 
 .sensitivity-wrap {
-  height: 220px;
-  min-height: 220px;
+  height: 176px;
+  min-height: 176px;
   position: relative;
 }
 
@@ -611,12 +617,12 @@ footer {
 
 @media (max-width: 1100px) {
   main {
-    grid-template-columns: 0.5fr 1.6fr 0.58fr;
+    grid-template-columns: 0.41fr 1.17fr 0.47fr;
   }
 
   .primary-row .advanced-toolkit {
-    flex: 0 0 502px;
-    width: 502px;
+    flex: 0 0 527px;
+    width: 527px;
   }
 
   .chart-container {
@@ -811,7 +817,7 @@ footer {
   }
 
   .chart-wrapper {
-    min-height: 150px;
+    min-height: 120px;
   }
 
   .slider-labels span {
