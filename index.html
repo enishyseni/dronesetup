@@ -26,516 +26,373 @@
         </div>
       </header>
 
-      <main>
-        <div class="config-panel glass-panel">
-          <h2>Configuration</h2>
+      <div class="primary-row">
+        <main>
+          <div class="config-panel glass-panel">
+            <h2>Configuration</h2>
 
-          <div class="config-section fpv-only">
-            <label for="frameSize">Frame Size</label>
-            <select id="frameSize" class="glass-select">
-              <option value="3inch">3 inch</option>
-              <option value="5inch" selected>5 inch</option>
-              <option value="7inch">7 inch</option>
-              <option value="10inch">10 inch</option>
-            </select>
-          </div>
-
-          <div class="config-section fpv-only">
-            <label for="motorKv">Motor KV Rating</label>
-            <select id="motorKv" class="glass-select">
-              <option value="1700">1700KV</option>
-              <option value="2400" selected>2400KV</option>
-              <option value="2700">2700KV</option>
-              <option value="3000">3000KV</option>
-            </select>
-          </div>
-
-          <div class="config-section">
-            <label for="batteryType">Battery Chemistry</label>
-            <select id="batteryType" class="glass-select">
-              <option value="lipo-3s">3S LiPo</option>
-              <option value="lipo-4s" selected>4S LiPo</option>
-              <option value="lipo-6s">6S LiPo</option>
-              <option value="liion-3s">3S Li-Ion</option>
-              <option value="liion-4s">4S Li-Ion</option>
-              <option value="liion-6s">6S Li-Ion</option>
-            </select>
-          </div>
-
-          <div class="config-section">
-            <label for="batteryCapacity">Battery Capacity</label>
-            <select id="batteryCapacity" class="glass-select">
-              <option value="1300">1300 mAh</option>
-              <option value="1500" selected>1500 mAh</option>
-              <option value="2200">2200 mAh</option>
-              <option value="3000">3000 mAh</option>
-              <option value="4000">4000 mAh</option>
-              <option value="5000">5000 mAh</option>
-            </select>
-          </div>
-
-          <div class="config-section">
-            <label for="flightController">Flight Controller</label>
-            <select id="flightController" class="glass-select">
-              <option value="f4" selected>F4</option>
-              <option value="f7">F7</option>
-              <option value="h7">H7</option>
-            </select>
-          </div>
-
-          <div class="config-section">
-            <label for="camera">Camera</label>
-            <select id="camera" class="glass-select">
-              <option value="analog" selected>Analog</option>
-              <option value="digital">Digital HD</option>
-              <option value="digital4k">Digital 4K</option>
-            </select>
-          </div>
-
-          <div class="config-section">
-            <label for="vtxPower">VTX Power</label>
-            <select id="vtxPower" class="glass-select">
-              <option value="25">25mW</option>
-              <option value="200" selected>200mW</option>
-              <option value="600">600mW</option>
-              <option value="1000">1000mW</option>
-            </select>
-          </div>
-
-          <div class="config-section">
-            <label for="propellerType">Propeller Selection</label>
-            <select id="propellerType" class="glass-select">
-              <option value="auto" selected>Auto (Best Match)</option>
-              <option value="manual">Manual APC Selection</option>
-            </select>
-          </div>
-
-          <div
-            id="apcPropSelection"
-            class="config-section"
-            style="display: none"
-          >
-            <label for="apcPropeller">APC Propeller</label>
-            <select id="apcPropeller" class="glass-select">
-              <option value="">Loading propellers...</option>
-            </select>
-          </div>
-
-          <!-- APC Integration Status -->
-          <div class="config-section" id="apcStatus" style="display: none">
-            <div class="apc-status-indicator">
-              <span class="status-icon">🚁</span>
-              <span class="status-text">APC Database Active</span>
+            <div class="config-section fpv-only">
+              <label for="frameSize">Frame Size</label>
+              <select id="frameSize" class="glass-select">
+                <option value="3inch">3 inch</option>
+                <option value="5inch" selected>5 inch</option>
+                <option value="7inch">7 inch</option>
+                <option value="10inch">10 inch</option>
+              </select>
             </div>
-          </div>
 
-          <div class="config-section fixed-wing-only hidden">
-            <label for="wingspan">Wingspan</label>
-            <select id="wingspan" class="glass-select">
-              <option value="800">800mm</option>
-              <option value="1000" selected>1000mm</option>
-              <option value="1500">1500mm</option>
-              <option value="2000">2000mm</option>
-            </select>
-          </div>
-
-          <div class="config-section fixed-wing-only hidden">
-            <label for="wingType">Wing Type</label>
-            <select id="wingType" class="glass-select">
-              <option value="conventional" selected>Conventional</option>
-              <option value="flying">Flying Wing</option>
-              <option value="delta">Delta Wing</option>
-            </select>
-          </div>
-
-          <!-- Add component comparison selector -->
-          <div class="config-section">
-            <label for="compareBy">Analyze Impact By</label>
-            <select id="compareBy" class="glass-select">
-              <option value="batteryType">Battery Chemistry</option>
-              <option value="batteryCapacity">Battery Capacity</option>
-              <option value="motorKv">Motor KV</option>
-              <option value="frameSize">Frame Size</option>
-              <option value="vtxPower">VTX Power</option>
-              <option value="all">All Components</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="visualization glass-panel">
-          <div class="tabs">
-            <button class="tab-btn active" data-tab="performance">
-              Performance
-            </button>
-            <button class="tab-btn" data-tab="weight">Weight Analysis</button>
-            <button class="tab-btn" data-tab="power">Power Usage</button>
-            <button class="tab-btn" data-tab="advanced">Advanced</button>
-          </div>
-
-          <div class="tab-content active" id="performance-tab">
-            <div class="chart-container">
-              <div class="chart-wrapper">
-                <canvas id="speedChart"></canvas>
-              </div>
-              <div class="chart-wrapper">
-                <canvas id="flightTimeChart"></canvas>
-              </div>
-              <div class="chart-wrapper">
-                <canvas id="rangeChart"></canvas>
-              </div>
-              <div class="chart-wrapper">
-                <canvas id="efficiencyChart"></canvas>
-              </div>
+            <div class="config-section fpv-only">
+              <label for="motorKv">Motor KV Rating</label>
+              <select id="motorKv" class="glass-select">
+                <option value="1700">1700KV</option>
+                <option value="2400" selected>2400KV</option>
+                <option value="2700">2700KV</option>
+                <option value="3000">3000KV</option>
+              </select>
             </div>
-          </div>
 
-          <div class="tab-content" id="weight-tab">
-            <div class="chart-container">
-              <div class="chart-wrapper">
-                <canvas id="weightDistributionChart"></canvas>
-              </div>
-              <div class="chart-wrapper">
-                <canvas id="payloadCapacityChart"></canvas>
-              </div>
-              <div class="chart-wrapper">
-                <canvas id="weightComparisonChart"></canvas>
-              </div>
-              <div class="chart-wrapper">
-                <canvas id="componentWeightChart"></canvas>
-              </div>
+            <div class="config-section">
+              <label for="batteryType">Battery Chemistry</label>
+              <select id="batteryType" class="glass-select">
+                <option value="lipo-3s">3S LiPo</option>
+                <option value="lipo-4s" selected>4S LiPo</option>
+                <option value="lipo-6s">6S LiPo</option>
+                <option value="liion-3s">3S Li-Ion</option>
+                <option value="liion-4s">4S Li-Ion</option>
+                <option value="liion-6s">6S Li-Ion</option>
+              </select>
             </div>
-          </div>
 
-          <div class="tab-content" id="power-tab">
-            <div class="chart-container">
-              <div class="chart-wrapper">
-                <canvas id="currentDrawChart"></canvas>
-              </div>
-              <div class="chart-wrapper">
-                <canvas id="powerToWeightChart"></canvas>
-              </div>
-              <div class="chart-wrapper">
-                <canvas id="batteryDischargeChart"></canvas>
-              </div>
-              <div class="chart-wrapper">
-                <canvas id="thermalEfficiencyChart"></canvas>
-              </div>
+            <div class="config-section">
+              <label for="batteryCapacity">Battery Capacity</label>
+              <select id="batteryCapacity" class="glass-select">
+                <option value="1300">1300 mAh</option>
+                <option value="1500" selected>1500 mAh</option>
+                <option value="2200">2200 mAh</option>
+                <option value="3000">3000 mAh</option>
+                <option value="4000">4000 mAh</option>
+                <option value="5000">5000 mAh</option>
+              </select>
             </div>
-          </div>
 
-          <div class="tab-content" id="advanced-tab">
-            <div class="chart-container">
-              <div class="chart-wrapper">
-                <canvas id="thrustCurveChart"></canvas>
-              </div>
-              <div class="chart-wrapper">
-                <canvas id="efficiencyMapChart"></canvas>
-              </div>
-              <div class="chart-wrapper">
-                <canvas id="noiseChart"></canvas>
-              </div>
-              <div class="chart-wrapper">
-                <canvas id="propEfficiencyChart"></canvas>
-              </div>
+            <div class="config-section">
+              <label for="flightController">Flight Controller</label>
+              <select id="flightController" class="glass-select">
+                <option value="f4" selected>F4</option>
+                <option value="f7">F7</option>
+                <option value="h7">H7</option>
+              </select>
             </div>
-          </div>
-        </div>
 
-        <div class="results glass-panel">
-          <h2>Performance Estimates</h2>
-          <div class="result-container">
-            <div class="result-item">
-              <span>Total Weight:</span>
-              <span id="totalWeight">0g</span>
+            <div class="config-section">
+              <label for="camera">Camera</label>
+              <select id="camera" class="glass-select">
+                <option value="analog" selected>Analog</option>
+                <option value="digital">Digital HD</option>
+                <option value="digital4k">Digital 4K</option>
+              </select>
             </div>
-            <div class="slider-container" data-target="batteryCapacity">
-              <input
-                type="range"
-                min="0"
-                max="5"
-                step="1"
-                class="config-slider"
-                data-config="batteryCapacity"
-              />
-              <div class="slider-labels">
-                <span>1300 mAh</span>
-                <span>1500 mAh</span>
-                <span>2200 mAh</span>
-                <span>3000 mAh</span>
-                <span>4000 mAh</span>
-                <span>5000 mAh</span>
+
+            <div class="config-section">
+              <label for="vtxPower">VTX Power</label>
+              <select id="vtxPower" class="glass-select">
+                <option value="25">25mW</option>
+                <option value="200" selected>200mW</option>
+                <option value="600">600mW</option>
+                <option value="1000">1000mW</option>
+              </select>
+            </div>
+
+            <div class="config-section">
+              <label for="propellerType">Propeller Selection</label>
+              <select id="propellerType" class="glass-select">
+                <option value="auto" selected>Auto (Best Match)</option>
+                <option value="manual">Manual APC Selection</option>
+              </select>
+            </div>
+
+            <div
+              id="apcPropSelection"
+              class="config-section"
+              style="display: none"
+            >
+              <label for="apcPropeller">APC Propeller</label>
+              <select id="apcPropeller" class="glass-select">
+                <option value="">Loading propellers...</option>
+              </select>
+            </div>
+
+            <!-- APC Integration Status -->
+            <div class="config-section" id="apcStatus" style="display: none">
+              <div class="apc-status-indicator">
+                <span class="status-icon">🚁</span>
+                <span class="status-text">APC Database Active</span>
               </div>
             </div>
 
-            <div class="result-item">
-              <span>Estimated Flight Time:</span>
-              <span id="flightTime">0 mins</span>
+            <div class="config-section fixed-wing-only hidden">
+              <label for="wingspan">Wingspan</label>
+              <select id="wingspan" class="glass-select">
+                <option value="800">800mm</option>
+                <option value="1000" selected>1000mm</option>
+                <option value="1500">1500mm</option>
+                <option value="2000">2000mm</option>
+              </select>
             </div>
-            <div class="slider-container" data-target="batteryType">
-              <input
-                type="range"
-                min="0"
-                max="5"
-                step="1"
-                class="config-slider"
-                data-config="batteryType"
-              />
-              <div class="slider-labels">
-                <span>3S LiPo</span>
-                <span>4S LiPo</span>
-                <span>6S LiPo</span>
-                <span>3S Li-Ion</span>
-                <span>4S Li-Ion</span>
-                <span>6S Li-Ion</span>
+
+            <div class="config-section fixed-wing-only hidden">
+              <label for="wingType">Wing Type</label>
+              <select id="wingType" class="glass-select">
+                <option value="conventional" selected>Conventional</option>
+                <option value="flying">Flying Wing</option>
+                <option value="delta">Delta Wing</option>
+              </select>
+            </div>
+
+            <!-- Add component comparison selector -->
+            <div class="config-section">
+              <label for="compareBy">Analyze Impact By</label>
+              <select id="compareBy" class="glass-select">
+                <option value="batteryType">Battery Chemistry</option>
+                <option value="batteryCapacity">Battery Capacity</option>
+                <option value="motorKv">Motor KV</option>
+                <option value="frameSize">Frame Size</option>
+                <option value="vtxPower">VTX Power</option>
+                <option value="all">All Components</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="visualization glass-panel">
+            <div class="tabs">
+              <button class="tab-btn active" data-tab="performance">
+                Performance
+              </button>
+              <button class="tab-btn" data-tab="weight">Weight Analysis</button>
+              <button class="tab-btn" data-tab="power">Power Usage</button>
+              <button class="tab-btn" data-tab="advanced">Advanced</button>
+            </div>
+
+            <div class="tab-content active" id="performance-tab">
+              <div class="chart-container">
+                <div class="chart-wrapper">
+                  <canvas id="speedChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                  <canvas id="flightTimeChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                  <canvas id="rangeChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                  <canvas id="efficiencyChart"></canvas>
+                </div>
               </div>
             </div>
 
-            <div class="result-item">
-              <span>Payload Capacity:</span>
-              <span id="payloadCapacity">0g</span>
-            </div>
-            <div class="slider-container" data-target="frameSize">
-              <input
-                type="range"
-                min="0"
-                max="3"
-                step="1"
-                class="config-slider"
-                data-config="frameSize"
-              />
-              <div class="slider-labels">
-                <span>3 inch</span>
-                <span>5 inch</span>
-                <span>7 inch</span>
-                <span>10 inch</span>
+            <div class="tab-content" id="weight-tab">
+              <div class="chart-container">
+                <div class="chart-wrapper">
+                  <canvas id="weightDistributionChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                  <canvas id="payloadCapacityChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                  <canvas id="weightComparisonChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                  <canvas id="componentWeightChart"></canvas>
+                </div>
               </div>
             </div>
 
-            <div class="result-item">
-              <span>Max Speed:</span>
-              <span id="maxSpeed">0 km/h</span>
-            </div>
-            <div class="slider-container" data-target="motorKv">
-              <input
-                type="range"
-                min="0"
-                max="3"
-                step="1"
-                class="config-slider"
-                data-config="motorKv"
-              />
-              <div class="slider-labels">
-                <span>1700KV</span>
-                <span>2400KV</span>
-                <span>2700KV</span>
-                <span>3000KV</span>
+            <div class="tab-content" id="power-tab">
+              <div class="chart-container">
+                <div class="chart-wrapper">
+                  <canvas id="currentDrawChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                  <canvas id="powerToWeightChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                  <canvas id="batteryDischargeChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                  <canvas id="thermalEfficiencyChart"></canvas>
+                </div>
               </div>
             </div>
 
-            <div class="result-item">
-              <span>Power-to-Weight Ratio:</span>
-              <span id="powerToWeight">0:1</span>
+            <div class="tab-content" id="advanced-tab">
+              <div class="chart-container">
+                <div class="chart-wrapper">
+                  <canvas id="thrustCurveChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                  <canvas id="efficiencyMapChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                  <canvas id="noiseChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                  <canvas id="propEfficiencyChart"></canvas>
+                </div>
+              </div>
             </div>
+          </div>
 
-            <div class="result-item">
-              <span>Range (Line of Sight):</span>
-              <span id="range">0 m</span>
-            </div>
-            <div class="slider-container" data-target="vtxPower">
-              <input
-                type="range"
-                min="0"
-                max="3"
-                step="1"
-                class="config-slider"
-                data-config="vtxPower"
-              />
-              <div class="slider-labels">
-                <span>25mW</span>
-                <span>200mW</span>
-                <span>600mW</span>
-                <span>1000mW</span>
+          <div class="results glass-panel">
+            <h2>Performance Estimates</h2>
+            <div class="result-container">
+              <div class="result-item">
+                <span>Total Weight:</span>
+                <span id="totalWeight">0g</span>
+              </div>
+              <div class="slider-container" data-target="batteryCapacity">
+                <input
+                  type="range"
+                  min="0"
+                  max="5"
+                  step="1"
+                  class="config-slider"
+                  data-config="batteryCapacity"
+                />
+                <div class="slider-labels">
+                  <span>1300 mAh</span>
+                  <span>1500 mAh</span>
+                  <span>2200 mAh</span>
+                  <span>3000 mAh</span>
+                  <span>4000 mAh</span>
+                  <span>5000 mAh</span>
+                </div>
+              </div>
+
+              <div class="result-item">
+                <span>Estimated Flight Time:</span>
+                <span id="flightTime">0 mins</span>
+              </div>
+              <div class="slider-container" data-target="batteryType">
+                <input
+                  type="range"
+                  min="0"
+                  max="5"
+                  step="1"
+                  class="config-slider"
+                  data-config="batteryType"
+                />
+                <div class="slider-labels">
+                  <span>3S LiPo</span>
+                  <span>4S LiPo</span>
+                  <span>6S LiPo</span>
+                  <span>3S Li-Ion</span>
+                  <span>4S Li-Ion</span>
+                  <span>6S Li-Ion</span>
+                </div>
+              </div>
+
+              <div class="result-item">
+                <span>Payload Capacity:</span>
+                <span id="payloadCapacity">0g</span>
+              </div>
+              <div class="slider-container" data-target="frameSize">
+                <input
+                  type="range"
+                  min="0"
+                  max="3"
+                  step="1"
+                  class="config-slider"
+                  data-config="frameSize"
+                />
+                <div class="slider-labels">
+                  <span>3 inch</span>
+                  <span>5 inch</span>
+                  <span>7 inch</span>
+                  <span>10 inch</span>
+                </div>
+              </div>
+
+              <div class="result-item">
+                <span>Max Speed:</span>
+                <span id="maxSpeed">0 km/h</span>
+              </div>
+              <div class="slider-container" data-target="motorKv">
+                <input
+                  type="range"
+                  min="0"
+                  max="3"
+                  step="1"
+                  class="config-slider"
+                  data-config="motorKv"
+                />
+                <div class="slider-labels">
+                  <span>1700KV</span>
+                  <span>2400KV</span>
+                  <span>2700KV</span>
+                  <span>3000KV</span>
+                </div>
+              </div>
+
+              <div class="result-item">
+                <span>Power-to-Weight Ratio:</span>
+                <span id="powerToWeight">0:1</span>
+              </div>
+
+              <div class="result-item">
+                <span>Range (Line of Sight):</span>
+                <span id="range">0 m</span>
+              </div>
+              <div class="slider-container" data-target="vtxPower">
+                <input
+                  type="range"
+                  min="0"
+                  max="3"
+                  step="1"
+                  class="config-slider"
+                  data-config="vtxPower"
+                />
+                <div class="slider-labels">
+                  <span>25mW</span>
+                  <span>200mW</span>
+                  <span>600mW</span>
+                  <span>1000mW</span>
+                </div>
+              </div>
+
+              <div class="result-item">
+                <span>Battery Discharge Rate:</span>
+                <span id="dischargeRate">0 C</span>
+              </div>
+
+              <div class="result-item">
+                <span>Current Draw (Hover):</span>
+                <span id="hoverCurrent">0 A</span>
               </div>
             </div>
 
-            <div class="result-item">
-              <span>Battery Discharge Rate:</span>
-              <span id="dischargeRate">0 C</span>
-            </div>
-
-            <div class="result-item">
-              <span>Current Draw (Hover):</span>
-              <span id="hoverCurrent">0 A</span>
-            </div>
-          </div>
-
-          <!-- Add Component Analysis Section -->
-          <h3 class="section-header">Component Impact Analysis</h3>
-          <div class="component-analysis">
-            <div class="impact-item">
-              <span>Heaviest Component:</span>
-              <span id="heaviestComponent">Battery (350g)</span>
-            </div>
-            <div class="impact-item">
-              <span>Limiting Factor:</span>
-              <span id="limitingFactor">Battery capacity</span>
-            </div>
-            <div class="impact-item">
-              <span>Suggested Improvement:</span>
-              <span id="suggestedImprovement">Increase battery capacity</span>
+            <!-- Add Component Analysis Section -->
+            <h3 class="section-header">Component Impact Analysis</h3>
+            <div class="component-analysis">
+              <div class="impact-item">
+                <span>Heaviest Component:</span>
+                <span id="heaviestComponent">Battery (350g)</span>
+              </div>
+              <div class="impact-item">
+                <span>Limiting Factor:</span>
+                <span id="limitingFactor">Battery capacity</span>
+              </div>
+              <div class="impact-item">
+                <span>Suggested Improvement:</span>
+                <span id="suggestedImprovement">Increase battery capacity</span>
+              </div>
             </div>
           </div>
-        </div>
-      </main>
+        </main>
 
-      <section
-        class="glass-panel calculation-guide"
-        aria-label="Calculation guide"
-      >
-        <h2>Calculation Guide &amp; Correlations</h2>
-
-        <div class="guide-grid">
-          <div class="guide-card">
-            <h3>Configuration Inputs</h3>
-            <ul>
-              <li>
-                <strong>Frame Size (FPV):</strong> Prop size proxy. Larger
-                frames increase thrust potential, weight, and speed potential.
-              </li>
-              <li>
-                <strong>Motor KV:</strong> RPM per volt. Higher KV increases
-                speed and peak current draw, but usually reduces efficiency.
-              </li>
-              <li>
-                <strong>Battery Chemistry:</strong> LiPo supports higher
-                discharge; Li-Ion has better energy density but lower safe
-                C-rate.
-              </li>
-              <li>
-                <strong>Battery Capacity:</strong> Higher mAh increases energy
-                and flight time, but also adds battery weight.
-              </li>
-              <li>
-                <strong>Flight Controller:</strong> Affects electronics weight
-                contribution.
-              </li>
-              <li>
-                <strong>Camera:</strong> Changes payload weight and impacts
-                total mass.
-              </li>
-              <li>
-                <strong>VTX Power:</strong> Improves link range, increases
-                power-system load and small weight overhead.
-              </li>
-              <li>
-                <strong>Wingspan (Fixed Wing):</strong> Larger wings improve
-                cruise efficiency but generally reduce top speed.
-              </li>
-              <li>
-                <strong>Wing Type (Fixed Wing):</strong> Modifies
-                drag/efficiency assumptions and therefore speed, current, and
-                range behavior.
-              </li>
-              <li>
-                <strong>Propeller Selection (APC):</strong> Auto/manual prop
-                choice impacts thrust and power modeling when APC data is
-                available.
-              </li>
-              <li>
-                <strong>Analyze Impact By:</strong> Controls which parameter is
-                swept in comparison charts.
-              </li>
-            </ul>
-          </div>
-
-          <div class="guide-card">
-            <h3>Calculated Outputs</h3>
-            <ul>
-              <li>
-                <strong>Total Weight:</strong> Sum of frame/airframe, motor(s),
-                battery, electronics, camera, VTX, and wiring assumptions.
-              </li>
-              <li>
-                <strong>Estimated Flight Time:</strong> Derived from usable
-                battery energy and average current demand.
-              </li>
-              <li>
-                <strong>Payload Capacity:</strong> Estimated max safe takeoff
-                mass minus current configuration mass.
-              </li>
-              <li>
-                <strong>Max Speed:</strong> Function of KV, voltage (cell
-                count), geometry (frame or wing), and chemistry power factor.
-              </li>
-              <li>
-                <strong>Power-to-Weight:</strong> Estimated available power
-                normalized by mass.
-              </li>
-              <li>
-                <strong>Range (Line of Sight):</strong> Minimum of
-                signal-limited range and time/speed-limited range.
-              </li>
-              <li>
-                <strong>Battery Discharge Rate:</strong> Estimated burst current
-                divided by battery Ah, shown as required C-rating.
-              </li>
-              <li>
-                <strong>Current Draw (Hover/Cruise):</strong> FPV hover current
-                or fixed-wing cruise current estimate.
-              </li>
-              <li>
-                <strong>Component Impact Analysis:</strong> Highlights heaviest
-                component, limiting factor, and best next improvement.
-              </li>
-            </ul>
-          </div>
-
-          <div class="guide-card correlations">
-            <h3>Key Correlations in This UI</h3>
-            <ul>
-              <li>
-                <strong>Battery Capacity ↑</strong> → Flight Time ↑, Total
-                Weight ↑, Payload Capacity ↓.
-              </li>
-              <li>
-                <strong>Motor KV ↑</strong> → Max Speed ↑, Current Draw ↑,
-                Flight Time ↓ (all else equal).
-              </li>
-              <li>
-                <strong>Cell Count ↑ (3S/4S/6S)</strong> → Voltage ↑,
-                Speed/Power potential ↑, often Current (A) at hover ↓ for same
-                power.
-              </li>
-              <li>
-                <strong>VTX Power ↑</strong> → Signal-based range ↑, but with
-                slight weight/current penalties.
-              </li>
-              <li>
-                <strong>Frame Size (FPV) ↑</strong> → Weight ↑ and speed
-                potential ↑; prop disc area can improve hover efficiency trends.
-              </li>
-              <li>
-                <strong>Wingspan (Fixed Wing) ↑</strong> → Cruise efficiency
-                tendency ↑ but top-speed tendency ↓.
-              </li>
-              <li>
-                <strong>Li-Ion vs LiPo:</strong> Li-Ion can extend endurance in
-                lighter-load setups, while LiPo supports higher burst
-                performance.
-              </li>
-              <li>
-                <strong>Range is dual-limited:</strong> Better VTX helps only
-                until endurance/speed becomes the limiting side.
-              </li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <section
-        class="glass-panel advanced-toolkit"
-        aria-label="Advanced toolkit"
-      >
+        <section
+          class="glass-panel advanced-toolkit"
+          aria-label="Advanced toolkit"
+        >
         <h2>Advanced Optimization Toolkit</h2>
 
         <div class="toolkit-grid">
@@ -735,6 +592,155 @@
           </div>
         </div>
       </section>
+      </div>
+      <!-- /.primary-row -->
+
+      <section
+        class="glass-panel calculation-guide"
+        aria-label="Calculation guide"
+      >
+          <h2>Calculation Guide &amp; Correlations</h2>
+
+          <div class="guide-grid">
+            <div class="guide-card">
+              <h3>Configuration Inputs</h3>
+              <ul>
+                <li>
+                  <strong>Frame Size (FPV):</strong> Prop size proxy. Larger
+                  frames increase thrust potential, weight, and speed potential.
+                </li>
+                <li>
+                  <strong>Motor KV:</strong> RPM per volt. Higher KV increases
+                  speed and peak current draw, but usually reduces efficiency.
+                </li>
+                <li>
+                  <strong>Battery Chemistry:</strong> LiPo supports higher
+                  discharge; Li-Ion has better energy density but lower safe
+                  C-rate.
+                </li>
+                <li>
+                  <strong>Battery Capacity:</strong> Higher mAh increases energy
+                  and flight time, but also adds battery weight.
+                </li>
+                <li>
+                  <strong>Flight Controller:</strong> Affects electronics weight
+                  contribution.
+                </li>
+                <li>
+                  <strong>Camera:</strong> Changes payload weight and impacts
+                  total mass.
+                </li>
+                <li>
+                  <strong>VTX Power:</strong> Improves link range, increases
+                  power-system load and small weight overhead.
+                </li>
+                <li>
+                  <strong>Wingspan (Fixed Wing):</strong> Larger wings improve
+                  cruise efficiency but generally reduce top speed.
+                </li>
+                <li>
+                  <strong>Wing Type (Fixed Wing):</strong> Modifies
+                  drag/efficiency assumptions and therefore speed, current, and
+                  range behavior.
+                </li>
+                <li>
+                  <strong>Propeller Selection (APC):</strong> Auto/manual prop
+                  choice impacts thrust and power modeling when APC data is
+                  available.
+                </li>
+                <li>
+                  <strong>Analyze Impact By:</strong> Controls which parameter
+                  is swept in comparison charts.
+                </li>
+              </ul>
+            </div>
+
+            <div class="guide-card">
+              <h3>Calculated Outputs</h3>
+              <ul>
+                <li>
+                  <strong>Total Weight:</strong> Sum of frame/airframe,
+                  motor(s), battery, electronics, camera, VTX, and wiring
+                  assumptions.
+                </li>
+                <li>
+                  <strong>Estimated Flight Time:</strong> Derived from usable
+                  battery energy and average current demand.
+                </li>
+                <li>
+                  <strong>Payload Capacity:</strong> Estimated max safe takeoff
+                  mass minus current configuration mass.
+                </li>
+                <li>
+                  <strong>Max Speed:</strong> Function of KV, voltage (cell
+                  count), geometry (frame or wing), and chemistry power factor.
+                </li>
+                <li>
+                  <strong>Power-to-Weight:</strong> Estimated available power
+                  normalized by mass.
+                </li>
+                <li>
+                  <strong>Range (Line of Sight):</strong> Minimum of
+                  signal-limited range and time/speed-limited range.
+                </li>
+                <li>
+                  <strong>Battery Discharge Rate:</strong> Estimated burst
+                  current divided by battery Ah, shown as required C-rating.
+                </li>
+                <li>
+                  <strong>Current Draw (Hover/Cruise):</strong> FPV hover
+                  current or fixed-wing cruise current estimate.
+                </li>
+                <li>
+                  <strong>Component Impact Analysis:</strong> Highlights
+                  heaviest component, limiting factor, and best next
+                  improvement.
+                </li>
+              </ul>
+            </div>
+
+            <div class="guide-card correlations">
+              <h3>Key Correlations in This UI</h3>
+              <ul>
+                <li>
+                  <strong>Battery Capacity ↑</strong> → Flight Time ↑, Total
+                  Weight ↑, Payload Capacity ↓.
+                </li>
+                <li>
+                  <strong>Motor KV ↑</strong> → Max Speed ↑, Current Draw ↑,
+                  Flight Time ↓ (all else equal).
+                </li>
+                <li>
+                  <strong>Cell Count ↑ (3S/4S/6S)</strong> → Voltage ↑,
+                  Speed/Power potential ↑, often Current (A) at hover ↓ for same
+                  power.
+                </li>
+                <li>
+                  <strong>VTX Power ↑</strong> → Signal-based range ↑, but with
+                  slight weight/current penalties.
+                </li>
+                <li>
+                  <strong>Frame Size (FPV) ↑</strong> → Weight ↑ and speed
+                  potential ↑; prop disc area can improve hover efficiency
+                  trends.
+                </li>
+                <li>
+                  <strong>Wingspan (Fixed Wing) ↑</strong> → Cruise efficiency
+                  tendency ↑ but top-speed tendency ↓.
+                </li>
+                <li>
+                  <strong>Li-Ion vs LiPo:</strong> Li-Ion can extend endurance
+                  in lighter-load setups, while LiPo supports higher burst
+                  performance.
+                </li>
+                <li>
+                  <strong>Range is dual-limited:</strong> Better VTX helps only
+                  until endurance/speed becomes the limiting side.
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
 
       <footer class="glass-panel">
         <p>
