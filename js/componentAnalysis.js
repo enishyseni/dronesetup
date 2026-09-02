@@ -21,203 +21,12 @@ class ComponentAnalyzer {
      * Analyze weight distribution for each component
      */
     getWeightBreakdown(config) {
-        const components = {};
-        
-        // Use this.droneType directly instead of accessing through calculator
-        if (this.droneType === 'fpv') {
-            // Frame weight
-            const frameWeights = {
-                '3inch': 80,
-                '5inch': 120,
-                '7inch': 180,
-                '10inch': 250
-            };
-            components.frame = frameWeights[config.frameSize];
-            
-            // Motors weight
-            const motorWeights = {
-                '1700': 28,
-                '2400': 32,
-                '2700': 34,
-                '3000': 36
-            };
-            components.motors = motorWeights[config.motorKv] * 4;
-            
-            // Battery weight
-            const batteryType = config.batteryType;
-            const batteryCapacity = config.batteryCapacity;
-            
-            const batteryWeightMap = {
-                'lipo-3s': {
-                    '1300': 150,
-                    '1500': 170,
-                    '2200': 230,
-                    '3000': 320,
-                    '4000': 410,
-                    '5000': 500
-                },
-                'lipo-4s': {
-                    '1300': 180,
-                    '1500': 200,
-                    '2200': 260,
-                    '3000': 350,
-                    '4000': 450,
-                    '5000': 550
-                },
-                'lipo-6s': {
-                    '1300': 230,
-                    '1500': 260,
-                    '2200': 320,
-                    '3000': 420,
-                    '4000': 530,
-                    '5000': 650
-                },
-                'liion-3s': {
-                    '1300': 180,
-                    '1500': 210,
-                    '2200': 280,
-                    '3000': 380,
-                    '4000': 490,
-                    '5000': 600
-                },
-                'liion-4s': {
-                    '1300': 220,
-                    '1500': 250,
-                    '2200': 320,
-                    '3000': 420,
-                    '4000': 540,
-                    '5000': 660
-                },
-                'liion-6s': {
-                    '1300': 290,
-                    '1500': 330,
-                    '2200': 410,
-                    '3000': 520,
-                    '4000': 650,
-                    '5000': 780
-                }
-            };
-            
-            components.battery = (batteryWeightMap[batteryType] && batteryWeightMap[batteryType][batteryCapacity]) || 200;
-            
-            // Flight Controller weight
-            components.fc = config.flightController === 'f4' ? 10 : (config.flightController === 'f7' ? 12 : 14);
-            
-            // ESC weight
-            components.esc = 15;
-            
-            // Camera weight
-            components.camera = config.camera === 'analog' ? 20 : (config.camera === 'digital' ? 35 : 45);
-            
-            // VTX weight
-            components.vtx = parseInt(config.vtxPower) / 100 + 8;
-            
-            // Receiver weight
-            components.receiver = 5;
-            
-            // Props weight
-            components.props = frameWeights[config.frameSize] / 30 * 4;
-            
-            // Wiring weight
-            components.wiring = 15;
-            
-        } else {
-            // Fixed wing weight analysis
-            const wingspanWeights = {
-                '800': 250,
-                '1000': 350,
-                '1500': 650,
-                '2000': 950
-            };
-            
-            const wingTypeMultipliers = {
-                'conventional': 1.1,
-                'flying': 0.9,
-                'delta': 0.95
-            };
-            
-            components.airframe = wingspanWeights[config.wingspan] * wingTypeMultipliers[config.wingType];
-            
-            // Motor weight
-            const motorWeights = {
-                '1700': 45,
-                '2400': 40,
-                '2700': 38,
-                '3000': 35
-            };
-            components.motor = motorWeights[config.motorKv];
-            
-            // Battery weight (same as FPV drone)
-            const batteryType = config.batteryType;
-            const batteryCapacity = config.batteryCapacity;
-            
-            const batteryWeightMap = {
-                'lipo-3s': {
-                    '1300': 150,
-                    '1500': 170,
-                    '2200': 230,
-                    '3000': 320,
-                    '4000': 410,
-                    '5000': 500
-                },
-                'lipo-4s': {
-                    '1300': 180,
-                    '1500': 200,
-                    '2200': 260,
-                    '3000': 350,
-                    '4000': 450,
-                    '5000': 550
-                },
-                'lipo-6s': {
-                    '1300': 230,
-                    '1500': 260,
-                    '2200': 320,
-                    '3000': 420,
-                    '4000': 530,
-                    '5000': 650
-                },
-                'liion-3s': {
-                    '1300': 180,
-                    '1500': 210,
-                    '2200': 280,
-                    '3000': 380,
-                    '4000': 490,
-                    '5000': 600
-                },
-                'liion-4s': {
-                    '1300': 220,
-                    '1500': 250,
-                    '2200': 320,
-                    '3000': 420,
-                    '4000': 540,
-                    '5000': 660
-                },
-                'liion-6s': {
-                    '1300': 290,
-                    '1500': 330,
-                    '2200': 410,
-                    '3000': 520,
-                    '4000': 650,
-                    '5000': 780
-                }
-            };
-            
-            components.battery = (batteryWeightMap[batteryType] && batteryWeightMap[batteryType][batteryCapacity]) || 200;
-            
-            // Electronics weight (FC, receiver, ESC, servos combined)
-            components.electronics = 80;
-            
-            // Camera weight
-            components.camera = config.camera === 'analog' ? 20 : (config.camera === 'digital' ? 35 : 45);
-            
-            // VTX weight
-            components.vtx = parseInt(config.vtxPower) / 100 + 8;
-            
-            // Propeller weight
-            components.propeller = 15;
+        const db = (typeof globalThis !== 'undefined' && globalThis.COMPONENT_DB) || null;
+        if (db) {
+            const parts = this.droneType === 'fpv' ? db.fpvBreakdown(config) : db.fwBreakdown(config);
+            return parts || {};
         }
-        
-        return components;
+        return {};
     }
     
     /**
@@ -242,42 +51,19 @@ class ComponentAnalyzer {
      * Determine what's limiting the drone's performance
      */
     getLimitingFactor(config) {
-        // Calculate weight first
         let totalWeight;
         if (this.droneType === 'fpv') {
             totalWeight = this.calculator.calculateFPVDroneWeight(config);
         } else {
             totalWeight = this.calculator.calculateFixedWingWeight(config);
         }
-        
-        // Get flight time
-        const flightTime = this.calculator.calculateFlightTime(config, totalWeight);
-        
-        // Get battery details
-        const batteryType = config.batteryType.split('-')[0];
-        const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
-        const capacity = parseInt(config.batteryCapacity);
-        
-        // Get thrust
-        let thrustToWeight = 0;
-        
-        if (this.droneType === 'fpv') {
-            const frameSize = parseInt(config.frameSize.replace('inch', ''));
-            const kvFactor = parseInt(config.motorKv) / 1000;
-            
-            // Estimate thrust per motor
-            const estimatedThrustPerMotor = frameSize * 100 * kvFactor * cellCount / 4;
-            const totalThrust = estimatedThrustPerMotor * 4;
-            
-            thrustToWeight = totalThrust / totalWeight;
-        } else {
-            const wingspan = parseInt(config.wingspan);
-            const wingType = config.wingType;
-            
-            // Estimate thrust for fixed wing
-            const wingArea = (wingspan / 1000) * (wingspan / 3000);
-            thrustToWeight = wingArea * 1000 / totalWeight; // Very simplified
+        if (totalWeight == null || !isFinite(totalWeight)) {
+            return 'Invalid configuration';
         }
+
+        const flightTime = this.calculator.calculateFlightTime(config, totalWeight);
+        const chem = this.calculator.chemistry(config);
+        const thrustToWeight = this.calculator.calculateThrustToWeight(config, totalWeight);
         
         // Calculate C-rating requirement
         const dischargeRate = this.calculator.calculateBatteryDischargeRate(config, totalWeight);
@@ -304,9 +90,9 @@ class ComponentAnalyzer {
         }
         
         // Check for discharge rate issues
-        if ((batteryType === 'lipo' && requiredCRating > 50) || 
-            (batteryType === 'liion' && requiredCRating > 7)) {
-            const maxRating = batteryType === 'lipo' ? 50 : 7;
+        if ((chem && chem.chem === 'lipo' && requiredCRating > 50) || 
+            (chem && chem.chem === 'liion' && requiredCRating > 7)) {
+            const maxRating = chem.chem === 'lipo' ? 50 : 7;
             limitations.push({ factor: 'Battery discharge rate', severity: (requiredCRating - maxRating) / 10 });
         }
         
@@ -366,7 +152,7 @@ class ComponentAnalyzer {
      */
     getThermalEfficiencyData(config) {
         // This would be a simplified model of thermal efficiency
-        const kvRating = parseInt(config.motorKv);
+        const kvRating = this.calculator.kv(config);
         const batteryType = config.batteryType.split('-')[0];
         const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
         
@@ -400,7 +186,7 @@ class ComponentAnalyzer {
             parseInt(config.frameSize.replace('inch', '')) : 
             parseInt(config.wingspan) / 100;
         
-        const kvRating = parseInt(config.motorKv);
+        const kvRating = this.calculator.kv(config);
         
         // Base noise level in dB - bigger props are generally louder
         const baseNoise = 60 + (frameSize * 2);
@@ -425,7 +211,7 @@ class ComponentAnalyzer {
      * Get propeller efficiency data
      */
     getPropEfficiencyData(config) {
-        const motorKv = parseInt(config.motorKv);
+        const motorKv = this.calculator.kv(config);
         const batteryVoltage = this.getBatteryVoltage(config);
         
         // Get prop size in inches - for fixed wing, estimate from wingspan
@@ -476,7 +262,7 @@ class ComponentAnalyzer {
             parseInt(config.frameSize.replace('inch', '')) : 
             parseInt(config.wingspan) / 200;
             
-        const kvRating = parseInt(config.motorKv);
+        const kvRating = this.calculator.kv(config);
         const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
         
         // Bigger props and higher KV generate more thrust
@@ -500,7 +286,7 @@ class ComponentAnalyzer {
      * Enhanced thermal analysis with multiple components
      */
     getThermalAnalysis(config) {
-        const kvRating = parseInt(config.motorKv);
+        const kvRating = this.calculator.kv(config);
         const batteryType = config.batteryType.split('-')[0];
         const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
         const frameSize = config.frameSize;
@@ -794,7 +580,7 @@ class ComponentAnalyzer {
             }
             
             // Performance optimization
-            const kvRating = parseInt(config.motorKv);
+            const kvRating = this.calculator.kv(config);
             const frameSize = parseInt(config.frameSize?.replace('inch', '') || '5');
             
             if (kvRating > 2700 && frameSize >= 7) {
@@ -1065,7 +851,7 @@ class ComponentAnalyzer {
 
             // Configuration-specific recommendations
             const frameSize = parseInt(config.frameSize?.replace('inch', '') || '5');
-            const motorKv = parseInt(config.motorKv);
+            const motorKv = this.calculator.kv(config);
 
             if (frameSize >= 7 && motorKv > 2500) {
                 recommendations.push({

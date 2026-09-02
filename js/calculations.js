@@ -4,6 +4,27 @@ class DroneCalculator {
         this.apcPropData = null; // For future APC integration
         this.apcIntegration = null; // APC Integration instance
         this.apcEnabled = false; // Flag for APC integration status
+        this.lastValidationErrors = [];
+    }
+
+    db() {
+        return (typeof globalThis !== 'undefined' && globalThis.COMPONENT_DB) || null;
+    }
+
+    kv(config) {
+        const database = this.db();
+        if (database && typeof database.resolveKv === 'function') {
+            return database.resolveKv(config);
+        }
+        return parseFloat(config && config.motorKv);
+    }
+
+    chemistry(config) {
+        const database = this.db();
+        if (database && typeof database.parseChemistry === 'function') {
+            return database.parseChemistry(config && config.batteryType);
+        }
+        return null;
     }
 
     setDroneType(type) {
@@ -11,250 +32,81 @@ class DroneCalculator {
     }
 
     validateConfig(config) {
-        const requiredFields = ['motorKv', 'batteryType', 'batteryCapacity'];
+        const errors = [];
+        const requiredFields = ['batteryType', 'batteryCapacity'];
         const droneSpecificFields = {
             fpv: ['frameSize'],
             fixedWing: ['wingspan', 'wingType']
         };
-        
-        const allRequired = [...requiredFields, ...droneSpecificFields[this.droneType]];
-        
+
+        const allRequired = [...requiredFields, ...(droneSpecificFields[this.droneType] || [])];
         for (const field of allRequired) {
-            if (!config[field]) {
-                console.warn(`Missing required configuration field: ${field}`);
-                return false;
+            if (!config || !config[field]) {
+                errors.push(`Missing required field: ${field}`);
             }
         }
-        
-        // Validate numeric values
-        const kvRating = parseInt(config.motorKv);
-        if (isNaN(kvRating) || kvRating < 1000 || kvRating > 4000) {
-            console.warn(`Invalid motor KV rating: ${config.motorKv}`);
+
+        const kvRating = this.kv(config);
+        if (isNaN(kvRating) || kvRating < 400 || kvRating > 4500) {
+            errors.push(`Invalid motor KV rating: ${config && config.motorKv}`);
+        }
+
+        if (!this.chemistry(config)) {
+            errors.push(`Invalid battery type: ${config && config.batteryType}`);
+        }
+
+        this.lastValidationErrors = errors;
+        if (errors.length) {
+            errors.forEach((msg) => console.warn(msg));
             return false;
         }
-        
         return true;
     }
 
     calculateFPVDroneWeight(config) {
         if (!this.validateConfig(config)) {
-            return 500; // Default fallback weight
+            return null;
         }
-        
-        // Basic weight calculations for FPV drone components
-        const frameWeights = {
-            '3inch': 80,
-            '5inch': 120,
-            '7inch': 180,
-            '10inch': 250
-        };
-
-        const motorWeights = {
-            '1700': 28,
-            '2400': 32,
-            '2700': 34,
-            '3000': 36
-        };
-
-        // Updated battery weights for both LiPo and Li-Ion
-        const batteryWeights = {
-            'lipo-3s': {
-                '1300': 150,
-                '1500': 170,
-                '2200': 230,
-                '3000': 320,
-                '4000': 410,
-                '5000': 500
-            },
-            'lipo-4s': {
-                '1300': 180,
-                '1500': 200,
-                '2200': 260,
-                '3000': 350,
-                '4000': 450,
-                '5000': 550
-            },
-            'lipo-6s': {
-                '1300': 230,
-                '1500': 260,
-                '2200': 320,
-                '3000': 420,
-                '4000': 530,
-                '5000': 650
-            },
-            'liion-3s': {
-                '1300': 180,
-                '1500': 210,
-                '2200': 280,
-                '3000': 380,
-                '4000': 490,
-                '5000': 600
-            },
-            'liion-4s': {
-                '1300': 220,
-                '1500': 250,
-                '2200': 320,
-                '3000': 420,
-                '4000': 540,
-                '5000': 660
-            },
-            'liion-6s': {
-                '1300': 290,
-                '1500': 330,
-                '2200': 410,
-                '3000': 520,
-                '4000': 650,
-                '5000': 780
-            }
-        };
-
-        const fcWeight = config.flightController === 'f4' ? 10 : (config.flightController === 'f7' ? 12 : 14);
-        const escWeight = 15;
-        const cameraWeight = config.camera === 'analog' ? 20 : (config.camera === 'digital' ? 35 : 45);
-        const receiverWeight = 5;
-        const vtxWeight = parseInt(config.vtxPower) / 100 + 8; // Higher power VTX weighs more
-        const propWeight = frameWeights[config.frameSize] / 30; // Prop weight scales with frame size
-        const wiringWeight = 15;
-        
-        // Calculate total weight
-        const frameWeight = frameWeights[config.frameSize];
-        const totalMotorWeight = motorWeights[config.motorKv] * 4; // Assuming quadcopter
-        const batteryWeight = batteryWeights[config.batteryType][config.batteryCapacity];
-        
-        const totalWeight = frameWeight + totalMotorWeight + batteryWeight + fcWeight + 
-                            escWeight + cameraWeight + receiverWeight + vtxWeight + 
-                            (propWeight * 4) + wiringWeight;
-        
-        return totalWeight;
+        return this.calculateAirframeWeight(config);
     }
 
     calculateFixedWingWeight(config) {
-        const wingspanWeights = {
-            '800': 250,
-            '1000': 350,
-            '1500': 650,
-            '2000': 950
-        };
+        if (!this.validateConfig(config)) {
+            return null;
+        }
+        return this.calculateAirframeWeight(config);
+    }
 
-        const wingTypeMultipliers = {
-            'conventional': 1.1, // Conventional has tail, so slightly heavier
-            'flying': 0.9,       // Flying wing is more efficient/lighter
-            'delta': 0.95        // Delta is between conventional and flying wing
-        };
-
-        // Fixed wing motors: lower KV = larger stator = heavier
-        const motorWeights = {
-            '1700': 55,
-            '2400': 50,
-            '2700': 48,
-            '3000': 45
-        };
-
-        // Updated battery weights for both LiPo and Li-Ion
-        const batteryWeights = {
-            'lipo-3s': {
-                '1300': 150,
-                '1500': 170,
-                '2200': 230,
-                '3000': 320,
-                '4000': 410,
-                '5000': 500
-            },
-            'lipo-4s': {
-                '1300': 180,
-                '1500': 200,
-                '2200': 260,
-                '3000': 350,
-                '4000': 450,
-                '5000': 550
-            },
-            'lipo-6s': {
-                '1300': 230,
-                '1500': 260,
-                '2200': 320,
-                '3000': 420,
-                '4000': 530,
-                '5000': 650
-            },
-            'liion-3s': {
-                '1300': 180,
-                '1500': 210,
-                '2200': 280,
-                '3000': 380,
-                '4000': 490,
-                '5000': 600
-            },
-            'liion-4s': {
-                '1300': 220,
-                '1500': 250,
-                '2200': 320,
-                '3000': 420,
-                '4000': 540,
-                '5000': 660
-            },
-            'liion-6s': {
-                '1300': 290,
-                '1500': 330,
-                '2200': 410,
-                '3000': 520,
-                '4000': 650,
-                '5000': 780
-            }
-        };
-
-        const baseWeight = wingspanWeights[config.wingspan] * wingTypeMultipliers[config.wingType];
-        const motorWeight = motorWeights[config.motorKv];
-        const batteryWeight = batteryWeights[config.batteryType][config.batteryCapacity];
-        const electronicsWeight = 80; // FC, ESC, receiver, servos, etc.
-        const cameraWeight = config.camera === 'analog' ? 20 : (config.camera === 'digital' ? 35 : 45);
-        const vtxWeight = parseInt(config.vtxPower) / 100 + 8; // Higher power VTX weighs more
-
-        return baseWeight + motorWeight + batteryWeight + electronicsWeight + cameraWeight + vtxWeight;
+    calculateAirframeWeight(config) {
+        const database = this.db();
+        if (!database) return null;
+        const parts = this.droneType === 'fpv'
+            ? database.fpvBreakdown(config)
+            : database.fwBreakdown(config);
+        if (!parts) return null;
+        const dryPlusPayload = database.sumBreakdown(parts);
+        const override = parseFloat(config && config.auwOverride);
+        if (override > 0) return override;
+        return dryPlusPayload;
     }
 
     calculateFlightTime(config, totalWeight) {
-        // Flight time calculation accounting for battery chemistry
-        const capacityFactor = parseInt(config.batteryCapacity) / 1000; // Convert to Ah
-        const batteryType = config.batteryType.split('-')[0]; // 'lipo' or 'liion'
-        const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
-        
-        // Energy density factor - Li-ion has better energy density
-        const energyDensityFactor = batteryType === 'lipo' ? 1.0 : 1.3;
-        
-        // Nominal voltage per cell
-        const cellVoltage = batteryType === 'lipo' ? 3.7 : 3.6;
-        
-        let avgCurrent;
+        if (!totalWeight || totalWeight <= 0) return null;
+        const chem = this.chemistry(config);
+        if (!chem) return null;
 
-        if (this.droneType === 'fpv') {
-            // FPV quad average current draw
-            // A 5" quad at 2400KV on 4S draws ~15-25A in mixed flying
-            // Base: weight-driven power demand. Hover power ≈ (mg)^1.5 / (2ρA)^0.5
-            // Simplified: heavier → more current, higher KV → more current, bigger props → more efficient
-            const kvFactor = parseInt(config.motorKv) / 2400;
-            const frameSize = parseInt(config.frameSize.replace('inch', ''));
-            const propEfficiency = Math.sqrt(frameSize / 5); // Larger props are more efficient per gram of thrust
-            const dischargeFactor = batteryType === 'lipo' ? 1.0 : 0.7;
-            
-            // Weight-proportional current with KV scaling and prop efficiency
-            // For 539g, 2400KV, 5": (539/55) * 1.0 / 1.0 * 1.0 = 9.8A average
-            avgCurrent = (totalWeight / 55) * kvFactor / propEfficiency * dischargeFactor;
-        } else {
-            // Fixed wings are ~3-4x more efficient than quads
-            const dischargeFactor = batteryType === 'lipo' ? 1.0 : 0.8;
-            const wingspan = parseInt(config.wingspan) / 1000;
-            // Larger wingspan = more efficient (lower current for same weight)
-            avgCurrent = (totalWeight / 200) * dischargeFactor / Math.sqrt(wingspan);
-        }
+        const hoverCurrent = this.calculateHoverCurrent(config, totalWeight);
+        if (!hoverCurrent || hoverCurrent <= 0) return null;
 
-        // Calculate flight time in minutes
-        // Using a discharge factor (you don't fully discharge the battery)
-        const dischargeSafety = batteryType === 'lipo' ? 0.8 : 0.9;
-        const calculatedTime = (capacityFactor / avgCurrent) * 60 * dischargeSafety * energyDensityFactor;
-        
-        // Realistic bounds: 2-45 minutes
-        const boundedTime = Math.max(Math.min(calculatedTime, 45), 2);
-        return parseFloat(boundedTime.toFixed(2));
+        const database = this.db();
+        const load = database
+            ? database.missionLoadFactor(config.missionLoad || 'mixed', this.droneType)
+            : 1.35;
+        const usableAh = (parseInt(config.batteryCapacity, 10) / 1000) * chem.usableFraction;
+        const avgCurrent = hoverCurrent * load;
+        const minutes = (usableAh / avgCurrent) * 60;
+        if (!isFinite(minutes) || minutes < 0) return null;
+        return parseFloat(minutes.toFixed(2));
     }
 
     calculatePayloadCapacity(config, totalWeight) {
@@ -264,7 +116,7 @@ class DroneCalculator {
         if (this.droneType === 'fpv') {
             // FPV drone thrust-to-weight calculation
             const frameSize = parseInt(config.frameSize.replace('inch', ''));
-            const kvFactor = parseInt(config.motorKv) / 1000;
+            const kvFactor = this.kv(config) / 1000;
             const batteryType = config.batteryType.split('-')[0];
             const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
             
@@ -311,7 +163,7 @@ class DroneCalculator {
         const powerFactor = batteryType === 'lipo' ? 1.0 : 0.85;
         
         if (this.droneType === 'fpv') {
-            const kvFactor = parseInt(config.motorKv) / 1000;
+            const kvFactor = this.kv(config) / 1000;
             const frameSize = parseInt(config.frameSize.replace('inch', ''));
             
             // Larger frames/props have higher pitch speed
@@ -335,7 +187,7 @@ class DroneCalculator {
             const sizeFactor = Math.pow(1000 / wingspan, 0.3);
             
             // Motor contribution (diminishing returns)
-            const kvFactor = Math.pow(parseInt(config.motorKv) / 2000, 0.5);
+            const kvFactor = Math.pow(this.kv(config) / 2000, 0.5);
             
             // Cell count adds voltage → more speed, but sub-linear
             const voltageFactor = Math.pow(cellCount / 4, 0.6);
@@ -344,48 +196,35 @@ class DroneCalculator {
         }
     }
 
-    calculatePowerToWeightRatio(config, totalWeight) {
-        // Calculate power to weight ratio
-        const batteryType = config.batteryType.split('-')[0];
-        const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
-        
-        // Nominal voltage per cell
-        const cellVoltage = batteryType === 'lipo' ? 3.7 : 3.6;
-        const voltage = cellCount * cellVoltage;
-        
-        // Power factor based on battery chemistry
-        const powerFactor = batteryType === 'lipo' ? 1.0 : 0.8;
-        
-        let power;
-        
-        if (this.droneType === 'fpv') {
-            const kvFactor = parseInt(config.motorKv) / 1000;
-            const frameSize = parseInt(config.frameSize.replace('inch', ''));
-            
-            // Estimate maximum current draw per motor
-            const maxCurrentPerMotor = kvFactor * frameSize * 5 * powerFactor;
-            
-            // Total power (4 motors)
-            power = voltage * maxCurrentPerMotor * 4;
-        } else {
-            const kvFactor = parseInt(config.motorKv) / 1000;
-            const wingspan = parseInt(config.wingspan) / 1000;
-            
-            // Estimate maximum current draw
-            const maxCurrent = kvFactor * wingspan * 15 * powerFactor;
-            
-            // Total power (single motor typically)
-            power = voltage * maxCurrent;
-        }
-        
-        // Convert weight to kg for power-to-weight calculation
+    calculateElectricalPower(config, totalWeight) {
+        const chem = this.chemistry(config);
+        if (!chem || !totalWeight) return 0;
+        const voltage = chem.cells * chem.nominalV;
+        const hoverCurrent = this.calculateHoverCurrent(config, totalWeight);
+        const database = this.db();
+        const load = database
+            ? database.missionLoadFactor(config.missionLoad || 'mixed', this.droneType)
+            : 1.35;
+        return voltage * hoverCurrent * load;
+    }
+
+    calculatePowerDensity(config, totalWeight) {
         const weightKg = totalWeight / 1000;
-        
-        // Calculate power to weight ratio (W/kg)
-        const ratio = power / weightKg;
-        
-        // Return a simplified ratio for display with 2 decimal places
-        return (ratio / 100).toFixed(2) + ":1";
+        if (!weightKg) return 0;
+        return this.calculateElectricalPower(config, totalWeight) / weightKg;
+    }
+
+    calculateThrustToWeight(config, totalWeight) {
+        if (!totalWeight) return 0;
+        const perMotor = this.calculateThrust(config);
+        const motors = this.droneType === 'fpv' ? 4 : 1;
+        const totalThrust = perMotor * motors;
+        return totalThrust / totalWeight;
+    }
+
+    calculatePowerToWeightRatio(config, totalWeight) {
+        const tw = this.calculateThrustToWeight(config, totalWeight);
+        return tw.toFixed(2) + ':1';
     }
 
     calculateRange(config) {
@@ -404,10 +243,11 @@ class DroneCalculator {
                             (camera === 'digital' ? 1.5 : 1.8); // 4K systems often have better antennas/reception
         
         // Flight time affects practical range
-        const flightTime = this.calculateFlightTime(config, 
-            this.droneType === 'fpv' ? 
-            this.calculateFPVDroneWeight(config) : 
-            this.calculateFixedWingWeight(config));
+        const weight = this.droneType === 'fpv'
+            ? this.calculateFPVDroneWeight(config)
+            : this.calculateFixedWingWeight(config);
+        const flightTime = this.calculateFlightTime(config, weight);
+        if (flightTime == null) return 0;
         
         // Speed affects how far you can get in the available time
         const maxSpeed = this.calculateMaxSpeed(config);
@@ -435,7 +275,7 @@ class DroneCalculator {
         let maxCurrentDraw;
         
         if (this.droneType === 'fpv') {
-            const kvFactor = parseInt(config.motorKv) / 1000;
+            const kvFactor = this.kv(config) / 1000;
             const frameSize = parseInt(config.frameSize.replace('inch', ''));
             const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
             
@@ -446,7 +286,7 @@ class DroneCalculator {
             // Total max current (4 motors, ~75% simultaneous max is realistic)
             maxCurrentDraw = maxCurrentPerMotor * 3;
         } else {
-            const kvFactor = parseInt(config.motorKv) / 1000;
+            const kvFactor = this.kv(config) / 1000;
             const wingspan = parseInt(config.wingspan) / 1000;
             const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
             
@@ -471,6 +311,7 @@ class DroneCalculator {
     }
 
     calculateHoverCurrent(config, totalWeight) {
+        if (!totalWeight || totalWeight <= 0) return null;
         // Calculate current draw during hover (for FPV) or cruise (for fixed wing)
         const batteryType = config.batteryType.split('-')[0];
         const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
@@ -483,7 +324,7 @@ class DroneCalculator {
             // Hover power: P_hover ≈ mg * sqrt(mg / (2 * rho * A))
             // Higher KV → motor runs faster for same thrust → draws more amps
             // Larger prop → more disc area → more efficient hover (less current)
-            const kvFactor = parseInt(config.motorKv) / 2400;
+            const kvFactor = this.kv(config) / 2400;
             const frameSize = parseInt(config.frameSize.replace('inch', ''));
             const propDiameter = frameSize * 0.0254; // inches to meters
             const discArea = Math.PI * Math.pow(propDiameter / 2, 2) * 4; // 4 props
@@ -533,7 +374,7 @@ class DroneCalculator {
      * Enhanced thrust calculation that could integrate APC propeller data
      */
     calculateThrustAdvanced(config) {
-        const motorKv = parseInt(config.motorKv);
+        const motorKv = this.kv(config);
         const batteryType = config.batteryType.split('-')[0];
         const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
         const cellVoltage = batteryType === 'lipo' ? 3.7 : 3.6;
@@ -615,7 +456,7 @@ class DroneCalculator {
             }
             
             this.apcIntegration = new APCIntegration();
-            const success = await this.apcIntegration.initialize('APC-Prop-DB.csv');
+            const success = await this.apcIntegration.initialize('data/apc-lite.json');
             this.apcEnabled = success;
             
             if (success) {
@@ -800,7 +641,7 @@ class DroneCalculator {
         }
     }
 
-    getComparisonData(config, metric) {
+    getComparisonData(config, metric, extraEnv) {
         if (!this.validateConfig(config)) {
             console.warn('Invalid configuration for comparison');
             return [];
@@ -822,7 +663,7 @@ class DroneCalculator {
                     options = ['1300', '1500', '2200', '3000', '4000', '5000'];
                     break;
                 case 'motorKv':
-                    options = ['1700', '2400', '2700', '3000'];
+                    options = this.db() ? this.db().motorOptions(this.droneType) : ['1700', '2400', '2700', '3000'];
                     break;
                 case 'frameSize':
                     if (this.droneType === 'fpv') {
@@ -862,25 +703,37 @@ class DroneCalculator {
                         this.calculateFixedWingWeight(tempConfig);
                     
                     // Validate calculated weight
-                    if (weight < 50 || weight > 5000) {
+                    if (weight == null || !isFinite(weight) || weight < 50 || weight > 8000) {
                         console.warn(`Unrealistic weight calculated: ${weight}g for ${option}`);
                         continue;
                     }
                     
                     const flightTime = this.calculateFlightTime(tempConfig, weight);
                     const hoverCurrent = this.calculateHoverCurrent(tempConfig, weight);
-                    
-                    // Ensure numeric precision
-                    results.push({
+                    if (flightTime == null || hoverCurrent == null) continue;
+
+                    const chem = this.chemistry(tempConfig);
+                    const voltage = chem ? chem.cells * chem.nominalV : 14.8;
+                    const energyWh = voltage * hoverCurrent * (flightTime / 60);
+                    const rangeM = this.calculateRange(tempConfig);
+                    const rangeKm = Math.max(rangeM / 1000, 0.001);
+                    const env = extraEnv || null;
+                    let row = {
                         option: option,
                         flightTime: parseFloat(flightTime.toFixed(2)),
                         maxSpeed: parseFloat(this.calculateMaxSpeed(tempConfig).toFixed(2)),
                         weight: parseFloat(weight.toFixed(2)),
                         payload: parseFloat(this.calculatePayloadCapacity(tempConfig, weight).toFixed(2)),
-                        range: parseFloat(this.calculateRange(tempConfig).toFixed(2)),
+                        range: parseFloat(rangeM.toFixed(2)),
                         current: parseFloat(hoverCurrent.toFixed(2)),
-                        efficiency: parseFloat((weight / flightTime).toFixed(2))
-                    });
+                        efficiency: parseFloat((energyWh / rangeKm).toFixed(2)),
+                        thrustToWeight: parseFloat(this.calculateThrustToWeight(tempConfig, weight).toFixed(2)),
+                        powerDensity: parseFloat(this.calculatePowerDensity(tempConfig, weight).toFixed(1))
+                    };
+                    if (env) {
+                        row = this.applyOperationalAdjustments(row, env);
+                    }
+                    results.push(row);
                 } catch (optionError) {
                     console.warn(`Error calculating for option ${option}:`, optionError);
                 }
@@ -894,31 +747,31 @@ class DroneCalculator {
     }
 
     calculateAllMetrics(config) {
-        let totalWeight;
-        
-        if (this.droneType === 'fpv') {
-            totalWeight = this.calculateFPVDroneWeight(config);
-        } else {
-            totalWeight = this.calculateFixedWingWeight(config);
+        const totalWeightRaw = this.droneType === 'fpv'
+            ? this.calculateFPVDroneWeight(config)
+            : this.calculateFixedWingWeight(config);
+
+        if (totalWeightRaw == null || !isFinite(totalWeightRaw)) {
+            return { error: (this.lastValidationErrors || []).join(' ') || 'Invalid configuration' };
         }
-        
-        // Format totalWeight to 2 decimal places
-        totalWeight = parseFloat(totalWeight.toFixed(2));
-        
+
+        const totalWeight = parseFloat(totalWeightRaw.toFixed(2));
         const flightTime = this.calculateFlightTime(config, totalWeight);
         const payloadCapacity = this.calculatePayloadCapacity(config, totalWeight);
         const maxSpeed = this.calculateMaxSpeed(config);
-        const powerToWeight = this.calculatePowerToWeightRatio(config, totalWeight);
+        const thrustToWeight = this.calculateThrustToWeight(config, totalWeight);
+        const powerDensity = this.calculatePowerDensity(config, totalWeight);
         const range = this.calculateRange(config);
         const dischargeRate = this.calculateBatteryDischargeRate(config, totalWeight);
         const hoverCurrent = this.calculateHoverCurrent(config, totalWeight);
-        
+
         return {
             totalWeight: totalWeight.toFixed(2) + 'g',
-            flightTime: flightTime.toFixed(2) + ' mins',
+            flightTime: (flightTime == null ? '—' : flightTime.toFixed(2) + ' mins'),
             payloadCapacity: payloadCapacity.toFixed(2) + 'g',
             maxSpeed: maxSpeed.toFixed(2) + ' km/h',
-            powerToWeight: powerToWeight,
+            powerToWeight: thrustToWeight.toFixed(2) + ':1',
+            powerDensity: powerDensity.toFixed(0) + ' W/kg',
             range: range.toFixed(2) + ' m',
             dischargeRate: dischargeRate,
             hoverCurrent: hoverCurrent.toFixed(2) + ' A'
@@ -929,11 +782,9 @@ class DroneCalculator {
      * Calculate motor RPM based on KV rating and battery voltage
      */
     calculateMotorRPM(config) {
-        const kvRating = parseInt(config.motorKv);
-        const batteryType = config.batteryType;
-        const cellCount = parseInt(batteryType.split('-')[1].replace('s', ''));
-        const nominalVoltage = 3.7 * cellCount; // Nominal LiPo/Li-ion voltage
-        
+        const kvRating = this.kv(config);
+        const chem = this.chemistry(config);
+        const nominalVoltage = chem ? chem.cells * chem.nominalV : 14.8;
         return kvRating * nominalVoltage;
     }
     
@@ -943,26 +794,23 @@ class DroneCalculator {
      */
     calculateThrust(config) {
         const rpm = this.calculateMotorRPM(config);
-        
-        // Constants and conversions
-        const airDensity = 1.225; // kg/m³ at sea level
-        const thrustCoefficient = 0.09; // Approximation - would be from prop data in reality
-        
-        // Map frame size to prop diameter in inches then convert to meters
-        const propDiameters = {
-            '3inch': 0.0762, // 3in to meters
-            '5inch': 0.127,  // 5in to meters
-            '7inch': 0.1778, // 7in to meters
-            '10inch': 0.254  // 10in to meters
-        };
-        
-        const propDiameter = propDiameters[config.frameSize];
-        const rps = rpm / 60; // Convert RPM to revolutions per second
-        
-        // Calculate thrust in newtons
+        const airDensity = 1.225;
+        const thrustCoefficient = 0.09;
+        let propDiameter;
+        if (this.droneType === 'fpv') {
+            const propDiameters = {
+                '3inch': 0.0762,
+                '5inch': 0.127,
+                '7inch': 0.1778,
+                '10inch': 0.254
+            };
+            propDiameter = propDiameters[config.frameSize] || 0.127;
+        } else {
+            const spanM = (parseInt(config.wingspan, 10) || 1000) / 1000;
+            propDiameter = Math.min(0.356, Math.max(0.152, spanM * 0.12));
+        }
+        const rps = rpm / 60;
         const thrust = thrustCoefficient * airDensity * Math.pow(rps, 2) * Math.pow(propDiameter, 4);
-        
-        // Return thrust in grams (1N ≈ 102g)
         return parseFloat((thrust * 102).toFixed(2));
     }
     
@@ -970,64 +818,59 @@ class DroneCalculator {
      * Calculate motor efficiency
      */
     calculateMotorEfficiency(config) {
-        // This would require more data like current draw and power
-        // Using simplified model based on motor KV and prop matching
-        const kvRating = parseInt(config.motorKv);
-        const frameSize = config.frameSize;
-        
-        // Optimal KV ranges for different frame sizes
-        const optimalKvRanges = {
-            '3inch': [2500, 3000],
-            '5inch': [2000, 2600],
-            '7inch': [1600, 2200],
-            '10inch': [1000, 1700]
-        };
-        
-        const [minKv, maxKv] = optimalKvRanges[frameSize];
-        
-        // Calculate efficiency as percentage of optimal range
-        if (kvRating < minKv) {
-            return parseFloat((70 + (kvRating - minKv + 500) / 500 * 15).toFixed(2)); // Underpowered
-        } else if (kvRating > maxKv) {
-            return parseFloat((85 - (kvRating - maxKv) / 400 * 15).toFixed(2)); // Overpowered
+        const kvRating = this.kv(config);
+        let minKv;
+        let maxKv;
+        if (this.droneType === 'fpv') {
+            const optimalKvRanges = {
+                '3inch': [2500, 3000],
+                '5inch': [2000, 2600],
+                '7inch': [1600, 2200],
+                '10inch': [1000, 1700]
+            };
+            [minKv, maxKv] = optimalKvRanges[config.frameSize] || optimalKvRanges['5inch'];
         } else {
-            // Within optimal range
-            const rangeWidth = maxKv - minKv;
-            const midpoint = minKv + rangeWidth / 2;
-            const distanceFromMid = Math.abs(kvRating - midpoint);
-            return parseFloat((95 - (distanceFromMid / (rangeWidth / 2)) * 10).toFixed(2));
+            const span = parseInt(config.wingspan, 10) || 1000;
+            [minKv, maxKv] = span >= 1500 ? [700, 1400] : [900, 1700];
         }
+        if (kvRating < minKv) {
+            return parseFloat(Math.max(40, 70 + (kvRating - minKv + 500) / 500 * 15).toFixed(2));
+        }
+        if (kvRating > maxKv) {
+            return parseFloat(Math.max(40, 85 - (kvRating - maxKv) / 400 * 15).toFixed(2));
+        }
+        const rangeWidth = maxKv - minKv;
+        const midpoint = minKv + rangeWidth / 2;
+        const distanceFromMid = Math.abs(kvRating - midpoint);
+        return parseFloat((95 - (distanceFromMid / (rangeWidth / 2)) * 10).toFixed(2));
     }
     
     /**
-     * Calculate PID values based on frame size and motor KV
+     * Recommended PIDs on Betaflight 4.x / EmuFlight scale.
      */
     calculateRecommendedPIDValues(config) {
-        const frameSize = config.frameSize;
-        const motorKv = parseInt(config.motorKv);
-        
-        // Base PID values by frame size
+        const frameSize = config.frameSize || '5inch';
+        const motorKv = this.kv(config);
         const basePIDs = {
-            '3inch': { P: 40, I: 50, D: 25 },
-            '5inch': { P: 45, I: 45, D: 25 },
-            '7inch': { P: 38, I: 40, D: 22 },
-            '10inch': { P: 30, I: 35, D: 18 }
+            '3inch': { P: 4.0, I: 0.045, D: 22, firmware: 'Betaflight 4.x' },
+            '5inch': { P: 3.5, I: 0.035, D: 30, firmware: 'Betaflight 4.x' },
+            '7inch': { P: 3.0, I: 0.030, D: 35, firmware: 'Betaflight 4.x' },
+            '10inch': { P: 2.4, I: 0.025, D: 40, firmware: 'Betaflight 4.x' }
         };
-        
-        const pid = {...basePIDs[frameSize]};
-        
-        // Adjust P based on motor KV (higher KV = more responsive = higher P)
-        if (motorKv > 2600) {
+        const pid = { ...(basePIDs[frameSize] || basePIDs['5inch']) };
+        if (this.droneType !== 'fpv') {
+            pid.P = 2.8;
+            pid.I = 0.03;
+            pid.D = 38;
+            pid.firmware = 'INAV / Betaflight 4.x';
+        } else if (motorKv > 2600) {
             pid.P *= 1.15;
         } else if (motorKv < 2000) {
             pid.P *= 0.85;
         }
-        
-        // Adjust D based on frame size and motor KV
         if (frameSize === '5inch' && motorKv > 2400) {
-            pid.D *= 1.2; // More dampening for high KV 5" builds
+            pid.D *= 1.15;
         }
-        
         return pid;
     }
     
@@ -1111,4 +954,45 @@ class DroneCalculator {
     calculateMaxRotationRate(rcRate, superRate) {
         return rcRate * superRate * 200;
     }
+
+    applyOperationalAdjustments(baseMetrics, env) {
+        const altitude = parseFloat(env && env.altitude) || 0;
+        const temperature = env && env.temperature != null ? parseFloat(env.temperature) : 20;
+        const wind = parseFloat(env && env.wind) || 0;
+        const batteryHealth = env && env.batteryHealth != null ? parseFloat(env.batteryHealth) : 100;
+        const batteryCycles = parseFloat(env && env.batteryCycles) || 0;
+        const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+        const airDensityFactor = Math.exp(-altitude / 8500);
+        const tempFactor = temperature < 15
+            ? (1 - (15 - temperature) * 0.005)
+            : temperature > 30
+                ? (1 - (temperature - 30) * 0.004)
+                : 1;
+        const cycleFactor = clamp(1 - batteryCycles * 0.0006, 0.7, 1);
+        const healthFactor = clamp((batteryHealth / 100) * tempFactor * cycleFactor, 0.6, 1.05);
+        const windFactor = clamp(1 - wind / 220, 0.5, 1);
+        const liftFactor = Math.pow(airDensityFactor, 0.35);
+        return {
+            ...baseMetrics,
+            flightTime: baseMetrics.flightTime * healthFactor * windFactor,
+            maxSpeed: baseMetrics.maxSpeed * Math.pow(airDensityFactor, 0.25) * clamp(1 - wind / 260, 0.6, 1),
+            payloadCapacity: (baseMetrics.payloadCapacity != null ? baseMetrics.payloadCapacity : baseMetrics.payload) * liftFactor,
+            payload: (baseMetrics.payload != null ? baseMetrics.payload : baseMetrics.payloadCapacity) * liftFactor,
+            range: baseMetrics.range * healthFactor * clamp(1 - wind / 180, 0.55, 1),
+            hoverCurrent: baseMetrics.hoverCurrent
+                ? baseMetrics.hoverCurrent / (healthFactor * liftFactor)
+                : baseMetrics.current / (healthFactor * liftFactor),
+            current: (baseMetrics.current || baseMetrics.hoverCurrent) / (healthFactor * liftFactor),
+            powerToWeight: baseMetrics.powerToWeight != null
+                ? baseMetrics.powerToWeight * liftFactor * healthFactor
+                : baseMetrics.thrustToWeight,
+            thrustToWeight: (baseMetrics.thrustToWeight || baseMetrics.powerToWeight || 0) * liftFactor * healthFactor,
+            dischargeRate: (baseMetrics.dischargeRate || 0) / (healthFactor * liftFactor),
+            envFactors: { airDensityFactor, tempFactor, cycleFactor, healthFactor, windFactor, liftFactor }
+        };
+    }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = DroneCalculator;
 }

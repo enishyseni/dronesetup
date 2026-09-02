@@ -9,8 +9,8 @@
       href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
       rel="stylesheet"
     />
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
   </head>
   <body>
     <div class="container">
@@ -72,7 +72,10 @@
             <div class="config-section fpv-only">
               <label for="motorKv">Motor KV Rating</label>
               <select id="motorKv" class="glass-select">
+                <option value="1400">1400KV</option>
                 <option value="1700">1700KV</option>
+                <option value="1900">1900KV</option>
+                <option value="2200">2200KV</option>
                 <option value="2400" selected>2400KV</option>
                 <option value="2700">2700KV</option>
                 <option value="3000">3000KV</option>
@@ -128,6 +131,81 @@
                 <option value="200" selected>200mW</option>
                 <option value="600">600mW</option>
                 <option value="1000">1000mW</option>
+              </select>
+            </div>
+
+            <div class="config-section">
+              <label for="customMotorKv">Custom KV (overrides select)</label>
+              <input
+                id="customMotorKv"
+                type="number"
+                class="glass-input advanced-input"
+                min="0"
+                max="4500"
+                step="50"
+                value=""
+                placeholder="Leave blank to use list"
+              />
+            </div>
+
+            <div class="config-section">
+              <label for="payloadMass">Added payload (g)</label>
+              <input
+                id="payloadMass"
+                type="number"
+                class="glass-input advanced-input"
+                min="0"
+                max="5000"
+                value="0"
+              />
+            </div>
+
+            <div class="config-section">
+              <label for="auwOverride">AUW override (g, 0 = auto)</label>
+              <input
+                id="auwOverride"
+                type="number"
+                class="glass-input advanced-input"
+                min="0"
+                max="20000"
+                value="0"
+              />
+            </div>
+
+            <div class="config-section">
+              <label for="batteryCRating">Battery C-rating (optional)</label>
+              <input
+                id="batteryCRating"
+                type="number"
+                class="glass-input advanced-input"
+                min="0"
+                max="200"
+                value=""
+                placeholder="e.g. 60"
+              />
+            </div>
+
+            <div class="config-section">
+              <label for="escAmps">ESC rating amps (optional)</label>
+              <input
+                id="escAmps"
+                type="number"
+                class="glass-input advanced-input"
+                min="0"
+                max="200"
+                value=""
+                placeholder="e.g. 45"
+              />
+            </div>
+
+            <div class="config-section">
+              <label for="missionLoad">Mission load</label>
+              <select id="missionLoad" class="glass-select">
+                <option value="hover">Hover / loiter</option>
+                <option value="mixed" selected>Mixed flying</option>
+                <option value="cinematic">Cinematic</option>
+                <option value="cruise">Cruise</option>
+                <option value="race">Race / full send</option>
               </select>
             </div>
 
@@ -362,8 +440,12 @@
               </div>
 
               <div class="result-item">
-                <span>Power-to-Weight Ratio:</span>
+                <span>Thrust-to-Weight:</span>
                 <span id="powerToWeight">0:1</span>
+              </div>
+              <div class="result-item">
+                <span>Power density:</span>
+                <span id="powerDensity">0 W/kg</span>
               </div>
 
               <div class="result-item">
@@ -552,6 +634,10 @@
 
             <div class="toolkit-card">
               <h3>Cost &amp; BOM</h3>
+              <p class="toolkit-metric" id="bomDisclaimer">
+                Indicative street prices for planning only — not a quote.
+                Updated 2026-09.
+              </p>
               <div id="bomTotal" class="toolkit-metric">Total Cost: $0.00</div>
               <div id="costEfficiency" class="toolkit-metric">
                 Cost Efficiency: $0.00 / min
@@ -609,6 +695,16 @@
                 <button id="exportReportBtn" class="toolkit-btn">
                   Export JSON Report
                 </button>
+                <button id="copyShareBtn" class="toolkit-btn">
+                  Copy share link
+                </button>
+                <button id="exportConfigBtn" class="toolkit-btn">
+                  Export config
+                </button>
+                <label class="toolkit-btn" for="importConfigInput">
+                  Import config
+                </label>
+                <input id="importConfigInput" type="file" accept="application/json" hidden />
               </div>
               <ul id="snapshotList" class="toolkit-list"></ul>
               <div id="snapshotDiff" class="snapshot-diff">
@@ -672,8 +768,8 @@
             <div class="toolkit-card">
               <h3>Manufacturing BOM Export</h3>
               <p class="toolkit-metric">
-                Export a full manufacturing-ready bill of materials with
-                supplier links and batch pricing.
+                Export a bill of materials with supplier links. Prices are
+                indicative planning figures, not quotes (2026-09).
               </p>
               <div class="toolkit-actions">
                 <button id="exportBomCsvBtn" class="toolkit-btn">
@@ -750,6 +846,13 @@
                   >
                     Default
                   </button>
+                  <button id="applyRecommendedPidBtn" class="toolkit-btn">
+                    Apply recommended (BF 4.x)
+                  </button>
+                </div>
+                <p class="toolkit-metric">
+                  Scale: <span id="pidFirmware">Betaflight 4.x</span>
+                </p>
                 </div>
               </div>
               <div class="pid-chart-wrap">
@@ -939,12 +1042,13 @@
       </footer>
     </div>
 
+    <script src="js/componentData.js"></script>
+    <script src="js/configStore.js"></script>
     <script src="js/newFeatures.js"></script>
     <script src="js/apcIntegration.js"></script>
     <script src="js/calculations.js"></script>
     <script src="js/componentAnalysis.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/main.js"></script>
-    <script src="js/apcDemo.js"></script>
   </body>
 </html>

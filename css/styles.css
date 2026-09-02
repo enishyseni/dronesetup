@@ -374,6 +374,16 @@ h2 {
   border-color: var(--primary);
 }
 
+.config-section .glass-input {
+  width: 100%;
+}
+
+label.toolkit-btn {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
 .toolkit-btn {
   background: rgba(108, 99, 255, 0.35);
   border: 1px solid var(--glass-border);

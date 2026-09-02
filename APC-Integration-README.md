@@ -1,6 +1,8 @@
 # APC Integration Framework
 
-This document describes the complete APC (American Propeller Company) Integration Framework that has been integrated into the Drone Setup tool.
+The production app loads a trimmed static-thrust pack from `data/apc-lite.json` (~180 propellers, ~124 KB). Rebuild it with `python3 scripts/build-apc-lite.py` after updating `APC-Prop-DB.csv`. The full CSV is not fetched at runtime.
+
+RPM queries outside a propeller's published envelope fall back to the simplified physics model instead of silently clamping.
 
 ## Overview
 

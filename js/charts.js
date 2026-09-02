@@ -41,6 +41,16 @@ class DroneCharts {
             'rgba(78, 205, 196, 0.7)',   // Mint
             'rgba(255, 99, 71, 0.7)'     // Tomato
         ];
+        this._lastComparisonMetric = 'batteryType';
+    }
+
+    _updateExistingChart(key, labels, values) {
+        const chart = this.charts[key];
+        if (!chart || !chart.data || !chart.data.datasets || !chart.data.datasets[0]) return false;
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = values;
+        chart.update();
+        return true;
     }
 
     initCharts() {
@@ -98,7 +108,11 @@ class DroneCharts {
         // Use the "Analyze Impact By" selector value instead of hardcoded batteryType
         const compareBySelect = document.getElementById('compareBy');
         const metric = compareBySelect ? compareBySelect.value : 'batteryType';
-        const data = this.calculator.getComparisonData(config, metric);
+        this._lastComparisonMetric = metric;
+        const env = (typeof ConfigStore !== 'undefined' && ConfigStore.getEnvironmentState)
+            ? ConfigStore.getEnvironmentState()
+            : null;
+        const data = this.calculator.getComparisonData(config, metric, env);
         
         if (!data) return;
         
@@ -133,15 +147,14 @@ class DroneCharts {
     }
     
     getCurrentConfig() {
-        // Get all configuration inputs — include all regardless of visibility
-        // Hidden inputs still hold valid values needed by calculations
+        if (typeof ConfigStore !== 'undefined' && ConfigStore.getCurrentConfig) {
+            return ConfigStore.getCurrentConfig();
+        }
         const configInputs = document.querySelectorAll('.glass-select');
         const config = {};
-        
         configInputs.forEach(input => {
             config[input.id] = input.value;
         });
-        
         return config;
     }
     
@@ -161,6 +174,10 @@ class DroneCharts {
     // Basic Performance Charts
     
     createSpeedChart(data) {
+        const labels = data.map(d => this.formatLabel(d.option));
+        const values = data.map(d => d.maxSpeed);
+        if (this._updateExistingChart('speedChart', labels, values)) return;
+
         const ctx = document.getElementById('speedChart').getContext('2d');
         
         // Destroy existing chart if it exists
@@ -228,6 +245,10 @@ class DroneCharts {
     }
 
     createFlightTimeChart(data) {
+        const labels = data.map(d => this.formatLabel(d.option));
+        const values = data.map(d => d.flightTime);
+        if (this._updateExistingChart('flightTimeChart', labels, values)) return;
+
         const ctx = document.getElementById('flightTimeChart').getContext('2d');
         
         if (this.charts.flightTimeChart) {
@@ -275,6 +296,10 @@ class DroneCharts {
     }
 
     createRangeChart(data) {
+        const labels = data.map(d => this.formatLabel(d.option));
+        const values = data.map(d => d.range);
+        if (this._updateExistingChart('rangeChart', labels, values)) return;
+
         const ctx = document.getElementById('rangeChart').getContext('2d');
         
         if (this.charts.rangeChart) {
@@ -331,7 +356,7 @@ class DroneCharts {
         // Ensure exactly 2 decimal precision for all data points
         const efficiencyData = data.map(d => ({
             option: d.option,
-            current: Number(Number(d.current).toFixed(2))
+            efficiency: Number(Number(d.efficiency).toFixed(2))
         }));
         
         this.charts.efficiencyChart = new Chart(ctx, {
@@ -339,8 +364,8 @@ class DroneCharts {
             data: {
                 labels: efficiencyData.map(d => this.formatLabel(d.option)),
                 datasets: [{
-                    label: 'Current Draw (A)',
-                    data: efficiencyData.map(d => d.current),
+                    label: 'Energy use (Wh/km)',
+                    data: efficiencyData.map(d => d.efficiency),
                     backgroundColor: 'rgba(153, 102, 255, 0.7)',
                     borderColor: 'rgba(153, 102, 255, 1)',
                     borderWidth: 2,
@@ -354,7 +379,7 @@ class DroneCharts {
                 plugins: {
                     title: {
                         display: true,
-                        text: 'Current Draw (Lower is Better)',
+                        text: 'Energy Use (lower is better)',
                         font: {
                             size: 16
                         }
@@ -365,7 +390,7 @@ class DroneCharts {
                     tooltip: {
                         callbacks: {
                             label: (context) => {
-                                return `Current Draw: ${context.raw.toFixed(2)}A`;
+                                return `Energy use: ${context.raw.toFixed(2)} Wh/km`;
                             }
                         }
                     }
@@ -375,7 +400,7 @@ class DroneCharts {
                         beginAtZero: true,
                         title: {
                             display: true,
-                            text: 'Current (A)'
+                            text: 'Wh/km'
                         },
                         ticks: {
                             callback: (value) => value.toFixed(2) // Fix decimal precision
@@ -702,28 +727,14 @@ class DroneCharts {
         }
         
         // Extract numerical value from power-to-weight ratio
-        const powerToWeightValues = data.map(d => {
-            const currentConfig = this.getCurrentConfig();
-            // Identify which config key this comparison data is varying
-            const comparisonKey = this._identifyComparisonKey(data, currentConfig);
-            const tempConfig = { ...currentConfig };
-            if (comparisonKey) {
-                tempConfig[comparisonKey] = d.option;
-            }
-            const pwrStr = this.calculator.calculatePowerToWeightRatio(
-                tempConfig,
-                d.weight
-            );
-            // Make sure we only get the numeric part and parse it as a float with 2 decimal precision
-            return parseFloat(parseFloat(pwrStr.split(':')[0]).toFixed(2));
-        });
+        const powerToWeightValues = data.map(d => Number(Number(d.thrustToWeight || d.powerToWeight || 0).toFixed(2)));
         
         this.charts.powerToWeightChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: data.map(d => this.formatLabel(d.option)),
                 datasets: [{
-                    label: 'Power-to-Weight Ratio',
+                    label: 'Thrust-to-Weight',
                     data: powerToWeightValues,
                     backgroundColor: this.colorPalette[4],
                     borderWidth: 1
@@ -735,7 +746,7 @@ class DroneCharts {
                 plugins: {
                     title: {
                         display: true,
-                        text: 'Power-to-Weight Ratio',
+                        text: 'Thrust-to-Weight Ratio',
                         font: { size: 14 }
                     },
                     legend: { display: false },
@@ -752,7 +763,7 @@ class DroneCharts {
                         beginAtZero: true,
                         title: {
                             display: true,
-                            text: 'Ratio',
+                            text: 'Thrust / Weight',
                             font: { size: 11 }
                         }
                     }
@@ -1204,27 +1215,20 @@ class DroneCharts {
         return null;
     }
 
-    formatLabel(label) {
-        // Format the labels to make them more readable
-        if (label.includes('lipo') || label.includes('liion')) {
+    formatLabel(label, metric) {
+        const key = metric || this._lastComparisonMetric;
+        if (key === 'motorKv') return `${label} KV`;
+        if (key === 'vtxPower') return `${label} mW`;
+        if (key === 'wingspan') return `${label} mm`;
+        if (key === 'batteryCapacity') return `${label} mAh`;
+        if (key === 'frameSize') return String(label).replace('inch', '"');
+        if (typeof label === 'string' && (label.includes('lipo') || label.includes('liion'))) {
             const parts = label.split('-');
-            return `${parts[0].charAt(0).toUpperCase() + parts[0].slice(1)} ${parts[1]}`;
+            const chem = parts[0] === 'lipo' ? 'LiPo' : 'Li-Ion';
+            return `${chem} ${parts[1]}`;
         }
-        if (label.includes('inch')) {
-            return label;
-        }
-        // Check if it's a number (capacity or wing span)
-        if (!isNaN(parseInt(label))) {
-            const num = parseInt(label);
-            // Known wingspan values vs battery capacity values
-            const wingspanValues = [800, 1000, 1500, 2000];
-            const capacityValues = [1300, 1500, 2200, 3000, 4000, 5000];
-            
-            if (this.calculator.droneType === 'fixedWing' && wingspanValues.includes(num)) {
-                return `${label} mm`;
-            } else {
-                return `${label} mAh`;
-            }
+        if (typeof label === 'string' && label.includes('inch')) {
+            return label.replace('inch', '"');
         }
         return label;
     }
@@ -1235,8 +1239,11 @@ class DroneCharts {
             const compareBySelect = document.getElementById('compareBy');
             primaryMetric = compareBySelect ? compareBySelect.value : 'batteryType';
         }
-        // Get comparison data for the selected metric
-        const data = this.calculator.getComparisonData(config, primaryMetric);
+        this._lastComparisonMetric = primaryMetric;
+        const env = (typeof ConfigStore !== 'undefined' && ConfigStore.getEnvironmentState)
+            ? ConfigStore.getEnvironmentState()
+            : null;
+        const data = this.calculator.getComparisonData(config, primaryMetric, env);
         
         // Update charts on current tab
         const activeTabId = document.querySelector('.tab-content.active').id;
@@ -1250,7 +1257,7 @@ class DroneCharts {
                     this.createEfficiencyChart(data);
                 } else {
                     // Create charts with default battery comparison data when no primary metric specified
-                    const defaultData = this.calculator.getComparisonData(config, 'batteryType');
+        const defaultData = this.calculator.getComparisonData(config, 'batteryType', env);
                     if (defaultData) {
                         this.createSpeedChart(defaultData);
                         this.createFlightTimeChart(defaultData);
@@ -1267,7 +1274,7 @@ class DroneCharts {
                     this.createPayloadCapacityChart(data);
                     this.createWeightComparisonChart(data);
                 } else {
-                    const defaultData = this.calculator.getComparisonData(config, 'batteryType');
+        const defaultData = this.calculator.getComparisonData(config, 'batteryType', env);
                     if (defaultData) {
                         this.createPayloadCapacityChart(defaultData);
                         this.createWeightComparisonChart(defaultData);
@@ -1282,7 +1289,7 @@ class DroneCharts {
                     this.createPowerToWeightChart(data);
                     this.createBatteryDischargeChart(data);
                 } else {
-                    const defaultData = this.calculator.getComparisonData(config, 'batteryType');
+        const defaultData = this.calculator.getComparisonData(config, 'batteryType', env);
                     if (defaultData) {
                         this.createCurrentDrawChart(defaultData);
                         this.createPowerToWeightChart(defaultData);

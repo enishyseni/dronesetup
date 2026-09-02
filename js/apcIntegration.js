@@ -8,18 +8,60 @@ class APCPropellerDatabase {
         this.propData = new Map();
         this.isLoaded = false;
         this.loadingPromise = null;
+        this.lastClamped = false;
     }
 
     /**
      * Load APC propeller database from CSV
      */
-    async loadDatabase(csvPath = './APC-Prop-DB.csv') {
+    async loadDatabase(csvPath = './data/apc-lite.json') {
         if (this.loadingPromise) {
             return this.loadingPromise;
         }
 
-        this.loadingPromise = this._loadCSVData(csvPath);
+        this.loadingPromise = csvPath.endsWith('.json')
+            ? this._loadJSONData(csvPath)
+            : this._loadCSVData(csvPath);
         return this.loadingPromise;
+    }
+
+    async _loadJSONData(jsonPath) {
+        try {
+            const response = await fetch(jsonPath);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch APC JSON: ${response.status}`);
+            }
+            const payload = await response.json();
+            const props = payload.props || payload;
+            let validEntries = 0;
+            Object.keys(props).forEach((propId) => {
+                const prop = props[propId];
+                if (!prop || !Array.isArray(prop.points)) return;
+                this.propData.set(propId, {
+                    diameter: prop.diameter,
+                    pitch: prop.pitch,
+                    dataPoints: prop.points.map((pt) => ({
+                        rpm: pt[0],
+                        velocity_ms: pt[1],
+                        velocity_mph: pt[1] * 2.23694,
+                        thrust_N: pt[2],
+                        power_W: pt[3],
+                        thrustCoeff: 0,
+                        powerCoeff: 0
+                    }))
+                });
+                validEntries += prop.points.length;
+            });
+            if (validEntries === 0) {
+                throw new Error('No valid data entries found in APC JSON');
+            }
+            this.isLoaded = true;
+            console.log(`APC lite loaded: ${this.propData.size} propellers, ${validEntries} data points`);
+        } catch (error) {
+            console.error('Failed to load APC lite JSON:', error);
+            this.isLoaded = false;
+            throw error;
+        }
     }
 
     /**
@@ -246,13 +288,19 @@ class APCPropellerDatabase {
      */
     _interpolateValue(sortedPoints, targetX, xKey, yKey) {
         if (sortedPoints.length === 0) return null;
-        if (sortedPoints.length === 1) return sortedPoints[0][yKey];
-
-        // Check bounds
-        if (targetX <= sortedPoints[0][xKey]) {
+        if (sortedPoints.length === 1) {
+            this.lastClamped = true;
             return sortedPoints[0][yKey];
         }
-        if (targetX >= sortedPoints[sortedPoints.length - 1][xKey]) {
+
+        const lo = sortedPoints[0][xKey];
+        const hi = sortedPoints[sortedPoints.length - 1][xKey];
+        this.lastClamped = targetX < lo || targetX > hi;
+
+        if (targetX <= lo) {
+            return sortedPoints[0][yKey];
+        }
+        if (targetX >= hi) {
             return sortedPoints[sortedPoints.length - 1][yKey];
         }
 
@@ -323,6 +371,13 @@ class APCPropellerDatabase {
         };
     }
 
+    isRpmInEnvelope(propId, rpm) {
+        const envelope = this.getOperatingEnvelope(propId);
+        if (!envelope) return false;
+        const [lo, hi] = envelope.rpmRange;
+        return rpm >= lo * 0.9 && rpm <= hi * 1.05;
+    }
+
     /**
      * Get all available propeller IDs
      */
@@ -375,7 +430,7 @@ class APCIntegration {
     /**
      * Initialize APC integration
      */
-    async initialize(csvPath = './APC-Prop-DB.csv') {
+    async initialize(csvPath = './data/apc-lite.json') {
         try {
             await this.database.loadDatabase(csvPath);
             console.log('APC Integration initialized successfully');
@@ -489,7 +544,9 @@ class APCIntegration {
      * Calculate motor RPM from configuration
      */
     _calculateMotorRPM(config) {
-        const motorKv = parseInt(config.motorKv);
+        const motorKv = (typeof COMPONENT_DB !== 'undefined' && COMPONENT_DB.resolveKv)
+            ? COMPONENT_DB.resolveKv(config)
+            : parseInt(config.motorKv, 10);
         const batteryType = config.batteryType.split('-')[0];
         const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
         const cellVoltage = batteryType === 'lipo' ? 3.7 : 3.6;

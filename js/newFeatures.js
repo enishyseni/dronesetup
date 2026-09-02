@@ -97,7 +97,7 @@ const PreBuiltConfigs = {
             description: 'Fast delta wing for speed runs and wind penetration. High KV, 6S LiPo.',
             category: 'Speed',
             difficulty: 'Advanced',
-            config: { wingspan: '1000', wingType: 'delta', motorKv: '3000', batteryType: 'lipo-6s', batteryCapacity: '2200', flightController: 'h7', camera: 'digital', vtxPower: '600' },
+            config: { wingspan: '1000', wingType: 'delta', motorKv: '1400', batteryType: 'lipo-6s', batteryCapacity: '2200', flightController: 'h7', camera: 'digital', vtxPower: '600' },
             tags: ['speed', 'delta', 'fast']
         },
         {
@@ -156,7 +156,7 @@ class CompatibilityChecker {
         const batteryType = config.batteryType.split('-')[0];
         const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
         const capacityMah = parseInt(config.batteryCapacity);
-        const motorKv = parseInt(config.motorKv);
+        const motorKv = this.calculator.kv(config);
         const vtxPower = parseInt(config.vtxPower);
         const cellVoltage = batteryType === 'lipo' ? 4.2 : 4.2; // max voltage
         const voltage = cellCount * cellVoltage;
@@ -270,11 +270,11 @@ const RegulationChecker = {
         'us': {
             name: 'United States (FAA)',
             rules: [
-                { threshold: 250, label: 'Under 250g', description: 'No registration required for recreational use. Remote ID may still be needed after 2024 rule.' },
+                { threshold: 250, label: 'Under 250g', description: 'Recreational exemption from FAA registration. Remote ID is not required under 250g (reviewed 2026-09).' },
                 { threshold: 25000, label: '250g – 25kg', description: 'Registration required ($5). Part 107 for commercial use. Remote ID required.' },
                 { threshold: Infinity, label: 'Over 25kg', description: 'Special airworthiness certificate required.' }
             ],
-            remoteId: 'Required for all drones ≥250g (FAA rule effective March 2024)',
+            remoteId: 'Required for drones ≥250g. Last reviewed 2026-09.',
             maxAltitude: '400 ft (120m) AGL',
             license: 'Part 107 certificate required for commercial operations'
         },
@@ -298,7 +298,7 @@ const RegulationChecker = {
                 { threshold: 20000, label: '250g – 20kg', description: 'Registration as operator (£10/year) and Flyer ID (free online test).' },
                 { threshold: Infinity, label: 'Over 20kg', description: 'CAA permission required.' }
             ],
-            remoteId: 'Not required yet but planned',
+            remoteId: 'Remote ID is being phased in; check current CAA rules. Last reviewed 2026-09.',
             maxAltitude: '400 ft (120m) AGL',
             license: 'Flyer ID (free test) for ≥250g; GVC or A2 CofC for commercial'
         },
@@ -586,12 +586,13 @@ class FlightEnvelope {
         const totalWeight = droneType === 'fpv'
             ? this.calculator.calculateFPVDroneWeight(config)
             : this.calculator.calculateFixedWingWeight(config);
+        if (totalWeight == null || !isFinite(totalWeight)) return null;
         const maxSpeedSea = this.calculator.calculateMaxSpeed(config);
         const batteryType = config.batteryType.split('-')[0];
         const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
         const cellVoltage = batteryType === 'lipo' ? 3.7 : 3.6;
         const voltage = cellCount * cellVoltage;
-        const motorKv = parseInt(config.motorKv);
+        const motorKv = this.calculator.kv(config);
         const weightKg = totalWeight / 1000;
         const g = 9.81;
 

@@ -2,7 +2,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize the calculator with error handling
     let calculator, componentAnalyzer, droneCharts;
     let sensitivityChart = null;
-    const snapshots = [];
+    let snapshots = (typeof ConfigStore !== 'undefined' && ConfigStore.loadSnapshots)
+        ? ConfigStore.loadSnapshots()
+        : [];
     
     try {
         calculator = new DroneCalculator();
@@ -26,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
         batteryType: ['lipo-3s', 'lipo-4s', 'lipo-6s', 'liion-3s', 'liion-4s', 'liion-6s'],
         frameSize: ['3inch', '5inch', '7inch', '10inch'],
         wingspan: ['800', '1000', '1500', '2000'],
-        motorKv: ['1700', '2400', '2700', '3000'],
+        motorKv: (typeof COMPONENT_DB !== 'undefined' ? COMPONENT_DB.motorOptions(calculator.droneType) : ['1700', '2400', '2700', '3000']),
         vtxPower: ['25', '200', '600', '1000']
     };
     
@@ -77,6 +79,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to collect current configuration
     // Always include ALL inputs — hidden inputs still hold valid values needed by calculations
     function getCurrentConfig() {
+        if (typeof ConfigStore !== 'undefined') {
+            return ConfigStore.getCurrentConfig();
+        }
         const config = {};
         configInputs.forEach(input => {
             config[input.id] = input.value;
@@ -102,6 +107,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function getEnvironmentState() {
+        if (typeof ConfigStore !== 'undefined') {
+            return ConfigStore.getEnvironmentState();
+        }
         return {
             altitude: parseFloat(document.getElementById('envAltitude')?.value || '0'),
             temperature: parseFloat(document.getElementById('envTemperature')?.value || '20'),
@@ -111,10 +119,15 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 
-    function calculateDetailedMetrics(config) {
+    function calculateDetailedMetrics(config, options) {
+        const useApc = !options || options.useApc !== false;
         const totalWeight = calculator.droneType === 'fpv'
             ? calculator.calculateFPVDroneWeight(config)
             : calculator.calculateFixedWingWeight(config);
+
+        if (totalWeight == null || !isFinite(totalWeight)) {
+            return { error: (calculator.lastValidationErrors || []).join('; ') || 'Invalid configuration' };
+        }
 
         const baseMetrics = {
             totalWeight,
@@ -124,13 +137,15 @@ document.addEventListener('DOMContentLoaded', function() {
             range: calculator.calculateRange(config),
             hoverCurrent: calculator.calculateHoverCurrent(config, totalWeight),
             powerToWeight: parseNumberFromMetric(calculator.calculatePowerToWeightRatio(config, totalWeight)),
+            thrustToWeight: calculator.calculateThrustToWeight(config, totalWeight),
+            powerDensity: calculator.calculatePowerDensity(config, totalWeight),
             dischargeRate: parseNumberFromMetric(calculator.calculateBatteryDischargeRate(config, totalWeight)),
             apcActive: false,
+            apcClamped: false,
             apcPropId: null
         };
 
-        // Enhance with APC data when available
-        if (calculator.apcEnabled && calculator.apcIntegration) {
+        if (useApc && calculator.apcEnabled && calculator.apcIntegration) {
             try {
                 const selectedProp = calculator.getSelectedPropeller(config);
                 if (selectedProp) {
@@ -138,22 +153,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     calculator.apcIntegration.selectedPropeller = propId;
                     const rpm = calculator.calculateMotorRPM(config);
                     const db = calculator.apcIntegration.database;
+                    const inEnvelope = typeof db.isRpmInEnvelope === 'function'
+                        ? db.isRpmInEnvelope(propId, rpm)
+                        : true;
 
+                    if (!inEnvelope) {
+                        baseMetrics.apcClamped = true;
+                        baseMetrics.apcPropId = propId;
+                    } else {
                     const apcThrust_N = db.interpolateThrust(propId, rpm, 0);
                     const apcPower_W = db.interpolatePower(propId, rpm, 0);
 
-                    if (apcThrust_N !== null && apcPower_W !== null) {
-                        const apcThrustPerMotor_g = apcThrust_N * 101.97; // N -> grams
+                    if (apcThrust_N !== null && apcPower_W !== null && !db.lastClamped) {
+                        const apcThrustPerMotor_g = apcThrust_N * 101.97;
                         const numMotors = calculator.droneType === 'fpv' ? 4 : 1;
                         const totalThrust_g = apcThrustPerMotor_g * numMotors;
-
-                        // Refine payload using APC thrust data
-                        // Safe flight requires at least 2:1 thrust-to-weight
                         const maxTakeoffWeight = totalThrust_g / 2;
                         baseMetrics.payloadCapacity = parseFloat(Math.max(0, maxTakeoffWeight - totalWeight).toFixed(2));
+                        baseMetrics.thrustToWeight = totalThrust_g / totalWeight;
 
-                        // Refine hover current using APC power data
-                        // At hover each motor produces weight/numMotors grams of thrust
                         const hoverThrustPerMotor_g = totalWeight / numMotors;
                         const hoverThrustPerMotor_N = hoverThrustPerMotor_g / 101.97;
                         const hoverRpm = (typeof db.findRPMForThrust === 'function')
@@ -163,24 +181,26 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (hoverRpm !== null) {
                             const hoverPower_W = db.interpolatePower(propId, hoverRpm, 0);
                             if (hoverPower_W !== null && hoverPower_W > 0) {
-                                const batteryType = config.batteryType.split('-')[0];
-                                const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
-                                const cellVoltage = batteryType === 'lipo' ? 3.7 : 3.6;
-                                const voltage = cellCount * cellVoltage;
+                                const chem = calculator.chemistry(config);
+                                const voltage = chem.cells * chem.nominalV;
                                 const hoverCurrentTotal = (hoverPower_W * numMotors) / voltage;
                                 baseMetrics.hoverCurrent = parseFloat(hoverCurrentTotal.toFixed(2));
-
-                                // Refine flight time from APC hover current
-                                const capacityAh = parseInt(config.batteryCapacity) / 1000;
-                                const dischargeSafety = batteryType === 'lipo' ? 0.8 : 0.9;
-                                const energyDensityFactor = batteryType === 'lipo' ? 1.0 : 1.3;
-                                const apcFlightTime = (capacityAh / hoverCurrentTotal) * 60 * dischargeSafety * energyDensityFactor;
-                                baseMetrics.flightTime = parseFloat(Math.max(Math.min(apcFlightTime, 45), 2).toFixed(2));
+                                const database = typeof COMPONENT_DB !== 'undefined' ? COMPONENT_DB : null;
+                                const load = database
+                                    ? database.missionLoadFactor(config.missionLoad || 'mixed', calculator.droneType)
+                                    : 1.35;
+                                const usableAh = (parseInt(config.batteryCapacity, 10) / 1000) * chem.usableFraction;
+                                const apcFlightTime = (usableAh / (hoverCurrentTotal * load)) * 60;
+                                baseMetrics.flightTime = parseFloat(apcFlightTime.toFixed(2));
                             }
                         }
 
                         baseMetrics.apcActive = true;
                         baseMetrics.apcPropId = propId;
+                    } else if (db.lastClamped) {
+                        baseMetrics.apcClamped = true;
+                        baseMetrics.apcPropId = propId;
+                    }
                     }
                 }
             } catch (apcError) {
@@ -192,38 +212,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function applyOperationalAdjustments(baseMetrics) {
-        const env = getEnvironmentState();
-        const airDensityFactor = Math.exp(-env.altitude / 8500);
-        const tempFactor = env.temperature < 15
-            ? (1 - (15 - env.temperature) * 0.005)
-            : env.temperature > 30
-                ? (1 - (env.temperature - 30) * 0.004)
-                : 1;
-        const cycleFactor = clamp(1 - env.batteryCycles * 0.0006, 0.7, 1);
-        const healthFactor = clamp((env.batteryHealth / 100) * tempFactor * cycleFactor, 0.6, 1.05);
-        const windFactor = clamp(1 - env.wind / 220, 0.5, 1);
-        const liftFactor = Math.pow(airDensityFactor, 0.35);
-
-        return {
-            ...baseMetrics,
-            flightTime: baseMetrics.flightTime * healthFactor * windFactor,
-            maxSpeed: baseMetrics.maxSpeed * Math.pow(airDensityFactor, 0.25) * clamp(1 - env.wind / 260, 0.6, 1),
-            payloadCapacity: baseMetrics.payloadCapacity * liftFactor,
-            range: baseMetrics.range * healthFactor * clamp(1 - env.wind / 180, 0.55, 1),
-            hoverCurrent: baseMetrics.hoverCurrent / (healthFactor * liftFactor),
-            powerToWeight: baseMetrics.powerToWeight * liftFactor * healthFactor,
-            dischargeRate: baseMetrics.dischargeRate / (healthFactor * liftFactor),
-            envFactors: { airDensityFactor, tempFactor, cycleFactor, healthFactor, windFactor, liftFactor }
-        };
+        if (!baseMetrics || baseMetrics.error) return baseMetrics;
+        return calculator.applyOperationalAdjustments(baseMetrics, getEnvironmentState());
     }
 
     function formatAdjustedMetrics(metrics) {
+        const tw = metrics.thrustToWeight != null ? metrics.thrustToWeight : metrics.powerToWeight;
         return {
             totalWeight: `${metrics.totalWeight.toFixed(2)}g`,
             flightTime: `${metrics.flightTime.toFixed(2)} mins`,
             payloadCapacity: `${Math.max(0, metrics.payloadCapacity).toFixed(2)}g`,
             maxSpeed: `${Math.max(0, metrics.maxSpeed).toFixed(2)} km/h`,
-            powerToWeight: `${Math.max(0, metrics.powerToWeight).toFixed(2)}:1`,
+            powerToWeight: `${Math.max(0, tw).toFixed(2)}:1`,
+            powerDensity: `${Math.max(0, metrics.powerDensity || 0).toFixed(0)} W/kg`,
             range: `${Math.max(0, metrics.range).toFixed(2)} m`,
             dischargeRate: `${Math.max(0, Math.ceil(metrics.dischargeRate / 5) * 5)}C`,
             hoverCurrent: `${Math.max(0, metrics.hoverCurrent).toFixed(2)} A`
@@ -231,33 +232,29 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function getCostBreakdown(config) {
-        const priceMaps = {
-            frameSize: { '3inch': 45, '5inch': 65, '7inch': 90, '10inch': 130 },
-            wingspan: { '800': 120, '1000': 160, '1500': 240, '2000': 340 },
-            motorKv: { '1700': 95, '2400': 85, '2700': 90, '3000': 100 },
-            flightController: { f4: 45, f7: 65, h7: 95 },
-            camera: { analog: 35, digital: 120, digital4k: 180 },
-            batteryType: { 'lipo-3s': 45, 'lipo-4s': 55, 'lipo-6s': 85, 'liion-3s': 60, 'liion-4s': 75, 'liion-6s': 110 },
-            batteryCapacity: { '1300': 0, '1500': 8, '2200': 18, '3000': 28, '4000': 45, '5000': 62 },
-            vtxPower: { '25': 25, '200': 40, '600': 65, '1000': 90 },
-            wingType: { conventional: 0, flying: 25, delta: 35 }
-        };
-
+        const db = typeof COMPONENT_DB !== 'undefined' ? COMPONENT_DB : null;
+        const prices = db ? db.PRICES : {};
+        const kv = db ? db.resolveKv(config) : parseFloat(config.motorKv);
         const items = [];
         if (calculator.droneType === 'fpv') {
-            items.push({ label: 'Frame Kit', cost: priceMaps.frameSize[config.frameSize] || 0 });
+            items.push({ label: 'Frame Kit', cost: (prices.frameSize && prices.frameSize[config.frameSize]) || 0 });
         } else {
-            items.push({ label: 'Airframe Kit', cost: (priceMaps.wingspan[config.wingspan] || 0) + (priceMaps.wingType[config.wingType] || 0) });
+            items.push({
+                label: 'Airframe Kit',
+                cost: ((prices.wingspan && prices.wingspan[config.wingspan]) || 0) + ((prices.wingType && prices.wingType[config.wingType]) || 0)
+            });
         }
-        items.push({ label: 'Motors', cost: priceMaps.motorKv[config.motorKv] || 0 });
-        items.push({ label: 'Flight Controller', cost: priceMaps.flightController[config.flightController] || 0 });
-        items.push({ label: 'Camera System', cost: priceMaps.camera[config.camera] || 0 });
-        items.push({ label: 'Battery Pack', cost: (priceMaps.batteryType[config.batteryType] || 0) + (priceMaps.batteryCapacity[config.batteryCapacity] || 0) });
-        items.push({ label: 'VTX/Link', cost: priceMaps.vtxPower[config.vtxPower] || 0 });
-        items.push({ label: 'ESC + Receiver + Misc', cost: 85 });
-
+        items.push({ label: 'Motors', cost: db ? db.nearestMotorCost(kv, calculator.droneType) : 90 });
+        items.push({ label: 'Flight Controller', cost: (prices.flightController && prices.flightController[config.flightController]) || 0 });
+        items.push({ label: 'Camera System', cost: (prices.camera && prices.camera[config.camera]) || 0 });
+        items.push({
+            label: 'Battery Pack',
+            cost: ((prices.batteryType && prices.batteryType[config.batteryType]) || 0) + ((prices.batteryCapacity && prices.batteryCapacity[config.batteryCapacity]) || 0)
+        });
+        items.push({ label: 'VTX/Link', cost: (prices.vtxPower && prices.vtxPower[config.vtxPower]) || 0 });
+        items.push({ label: 'ESC + Receiver + Misc', cost: prices.misc || 85 });
         const total = items.reduce((sum, i) => sum + i.cost, 0);
-        return { items, total };
+        return { items, total, note: db ? db.PRICE_NOTE : 'Indicative prices' };
     }
 
     function updateBomAndCost(config, adjustedMetrics) {
@@ -271,26 +268,30 @@ document.addEventListener('DOMContentLoaded', function() {
             .map(item => `<li>${item.label}: $${item.cost.toFixed(2)}</li>`)
             .join('');
 
-        bomTotal.textContent = `Total Cost: $${breakdown.total.toFixed(2)}`;
+        bomTotal.textContent = `Total Cost: $${breakdown.total.toFixed(2)} (indicative)`;
         const costPerMin = adjustedMetrics.flightTime > 0 ? breakdown.total / adjustedMetrics.flightTime : 0;
-        costEfficiency.textContent = `Cost Efficiency: $${costPerMin.toFixed(2)} / min`;
+        costEfficiency.textContent = `Cost Efficiency: $${costPerMin.toFixed(2)} / min · ${breakdown.note || COMPONENT_DB.PRICE_NOTE}`;
     }
 
-    function updateConfidenceBands(adjustedMetrics) {
+    function updateConfidenceBands(adjustedMetrics, config) {
+        const db = typeof COMPONENT_DB !== 'undefined' ? COMPONENT_DB : null;
+        const typicalLoad = db ? db.missionLoadFactor(config && config.missionLoad || 'mixed', calculator.droneType) : 1.35;
+        const hoverLoad = db ? db.missionLoadFactor('hover', calculator.droneType) : 1.0;
+        const raceLoad = db ? db.missionLoadFactor('race', calculator.droneType) : 1.8;
         const rows = [
-            ['confFlightTime', adjustedMetrics.flightTime, 'min'],
-            ['confMaxSpeed', adjustedMetrics.maxSpeed, 'km/h'],
-            ['confRange', adjustedMetrics.range, 'm'],
-            ['confPayload', adjustedMetrics.payloadCapacity, 'g']
+            ['confFlightTime', adjustedMetrics.flightTime, 'min', true],
+            ['confMaxSpeed', adjustedMetrics.maxSpeed, 'km/h', false],
+            ['confRange', adjustedMetrics.range, 'm', true],
+            ['confPayload', adjustedMetrics.payloadCapacity, 'g', false]
         ];
 
-        rows.forEach(([id, value, unit]) => {
+        rows.forEach(([id, value, unit, scaleWithLoad]) => {
             const el = document.getElementById(id);
             if (!el) return;
-            const best = value * 1.12;
+            const best = scaleWithLoad ? value * (typicalLoad / hoverLoad) : value * 1.08;
             const typical = value;
-            const worst = value * 0.88;
-            el.textContent = `${best.toFixed(2)} / ${typical.toFixed(2)} / ${Math.max(0, worst).toFixed(2)} ${unit}`;
+            const worst = scaleWithLoad ? value * (typicalLoad / raceLoad) : value * 0.85;
+            el.textContent = `${Math.max(0, best).toFixed(2)} / ${typical.toFixed(2)} / ${Math.max(0, worst).toFixed(2)} ${unit}`;
         });
     }
 
@@ -315,6 +316,17 @@ document.addEventListener('DOMContentLoaded', function() {
         if (adjustedMetrics.flightTime < 5) {
             warnings.push('Very short flight time; battery stress and mission margin are poor.');
         }
+        if (adjustedMetrics.flightTime > 90) {
+            warnings.push('Modeled flight time exceeds 90 min — treat as optimistic until verified in flight.');
+        }
+        const statedC = parseFloat(config.batteryCRating);
+        if (statedC > 0 && adjustedMetrics.dischargeRate > statedC) {
+            warnings.push(`Required C-rate (~${adjustedMetrics.dischargeRate.toFixed(0)}C) exceeds the pack rating you entered (${statedC}C).`);
+        }
+        const escAmps = parseFloat(config.escAmps);
+        if (escAmps > 0 && calculator.droneType === 'fpv' && adjustedMetrics.hoverCurrent / 4 > escAmps * 0.7) {
+            warnings.push(`Hover current per motor may exceed 70% of the ${escAmps}A ESC rating.`);
+        }
 
         if (warnings.length === 0) {
             safetyList.innerHTML = '<li>No critical safety flags detected for current scenario.</li>';
@@ -327,7 +339,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const optionSets = {
             batteryType: ['lipo-3s', 'lipo-4s', 'lipo-6s', 'liion-3s', 'liion-4s', 'liion-6s'],
             batteryCapacity: ['1300', '1500', '2200', '3000', '4000', '5000'],
-            motorKv: ['1700', '2400', '2700', '3000'],
+            motorKv: (typeof COMPONENT_DB !== 'undefined' ? COMPONENT_DB.motorOptions(calculator.droneType) : ['1700', '2400', '2700', '3000']),
             vtxPower: ['25', '200', '600', '1000'],
             frameSize: ['3inch', '5inch', '7inch', '10inch'],
             wingspan: ['800', '1000', '1500', '2000'],
@@ -419,19 +431,29 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!a || !b) return;
 
         const options = snapshots
-            .map((s, i) => `<option value="${i}">${s.name}</option>`)
-            .join('');
-        a.innerHTML = options;
-        b.innerHTML = options;
+            .map((s, i) => {
+                const opt = document.createElement('option');
+                opt.value = String(i);
+                opt.textContent = s.name;
+                return opt;
+            });
+        a.replaceChildren(...options.map((o) => o.cloneNode(true)));
+        b.replaceChildren(...options);
     }
 
     function updateSnapshotsList() {
         const list = document.getElementById('snapshotList');
         if (!list) return;
 
-        list.innerHTML = snapshots
-            .map((s, i) => `<li>${i + 1}. ${s.name} — ${s.metrics.flightTime.toFixed(2)} min, ${s.metrics.range.toFixed(0)} m, ${s.metrics.totalWeight.toFixed(0)} g</li>`)
-            .join('');
+        list.textContent = '';
+        snapshots.forEach((s, i) => {
+            const li = document.createElement('li');
+            const time = s.metrics && s.metrics.flightTime != null ? s.metrics.flightTime.toFixed(2) : '—';
+            const range = s.metrics && s.metrics.range != null ? s.metrics.range.toFixed(0) : '—';
+            const weight = s.metrics && s.metrics.totalWeight != null ? s.metrics.totalWeight.toFixed(0) : '—';
+            li.textContent = `${i + 1}. ${s.name} — ${time} min, ${range} m, ${weight} g`;
+            list.appendChild(li);
+        });
     }
 
     function compareSnapshots() {
@@ -473,6 +495,7 @@ document.addEventListener('DOMContentLoaded', function() {
             metrics: { ...adjustedMetrics },
             environment: getEnvironmentState()
         });
+        if (typeof ConfigStore !== 'undefined') ConfigStore.saveSnapshots(snapshots);
 
         if (nameInput) nameInput.value = '';
         updateSnapshotsList();
@@ -520,7 +543,7 @@ document.addEventListener('DOMContentLoaded', function() {
             trainer: { type: 'fpv', frameSize: '3inch', motorKv: '1700', batteryType: 'lipo-3s', batteryCapacity: '1300', camera: 'analog', vtxPower: '25', flightController: 'f4' },
             cruise_fw: { type: 'fixedWing', wingspan: '1500', wingType: 'conventional', motorKv: '1700', batteryType: 'liion-4s', batteryCapacity: '4000', camera: 'digital', vtxPower: '200', flightController: 'f7' },
             efficiency_fw: { type: 'fixedWing', wingspan: '2000', wingType: 'flying', motorKv: '1700', batteryType: 'liion-6s', batteryCapacity: '5000', camera: 'analog', vtxPower: '200', flightController: 'f7' },
-            speed_fw: { type: 'fixedWing', wingspan: '1000', wingType: 'delta', motorKv: '3000', batteryType: 'lipo-6s', batteryCapacity: '2200', camera: 'digital', vtxPower: '600', flightController: 'h7' }
+            speed_fw: { type: 'fixedWing', wingspan: '1000', wingType: 'delta', motorKv: '1400', batteryType: 'lipo-6s', batteryCapacity: '2200', camera: 'digital', vtxPower: '600', flightController: 'h7' }
         };
 
         const profile = profiles[profileId];
@@ -553,7 +576,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const values = {
             batteryType: ['lipo-3s', 'lipo-4s', 'lipo-6s', 'liion-3s', 'liion-4s', 'liion-6s'],
             batteryCapacity: ['1300', '1500', '2200', '3000', '4000', '5000'],
-            motorKv: ['1700', '2400', '2700', '3000'],
+            motorKv: (typeof COMPONENT_DB !== 'undefined' ? COMPONENT_DB.motorOptions(calculator.droneType) : ['1700', '2400', '2700', '3000']),
             vtxPower: ['25', '200', '600', '1000'],
             frameSize: ['3inch', '5inch', '7inch', '10inch'],
             wingspan: ['800', '1000', '1500', '2000'],
@@ -590,7 +613,8 @@ document.addEventListener('DOMContentLoaded', function() {
             };
 
         iterate(candidate => {
-            const raw = calculateDetailedMetrics(candidate);
+            const raw = calculateDetailedMetrics(candidate, { useApc: false });
+            if (raw.error) return;
             const adjusted = applyOperationalAdjustments(raw);
             if (adjusted.flightTime < targetFlightTime) return;
             if (adjusted.totalWeight > targetMaxWeight) return;
@@ -658,12 +682,18 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Validate configuration
             if (!calculator.validateConfig(config)) {
-                showUserWarning('Invalid configuration detected. Please check your settings.');
+                const detail = (calculator.lastValidationErrors || []).join('; ') || 'Invalid configuration';
+                showUserWarning(detail);
+                safelyUpdateElementText('flightTime', '—');
+                safelyUpdateElementText('totalWeight', '—');
                 return;
             }
             
-            // Calculate metrics using calculator + environment/battery condition modifiers
             const rawMetrics = calculateDetailedMetrics(config);
+            if (rawMetrics.error) {
+                showUserWarning(rawMetrics.error);
+                return;
+            }
             const adjustedMetrics = applyOperationalAdjustments(rawMetrics);
             const metrics = formatAdjustedMetrics(adjustedMetrics);
             
@@ -696,7 +726,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             if (document.getElementById('maxRPM')) {
-                const motorKv = parseInt(config.motorKv);
+                const motorKv = calculator.kv(config);
                 const batteryType = config.batteryType.split('-')[0];
                 const cellCount = parseInt(config.batteryType.split('-')[1].replace('s', ''));
                 const cellVoltage = batteryType === 'lipo' ? 3.7 : 3.6;
@@ -710,6 +740,7 @@ document.addEventListener('DOMContentLoaded', function() {
             safelyUpdateElementText('flightTime', `${metrics.flightTime}`);
             safelyUpdateElementText('maxSpeed', `${metrics.maxSpeed}`);
             safelyUpdateElementText('powerToWeight', `${metrics.powerToWeight}`);
+            safelyUpdateElementText('powerDensity', `${metrics.powerDensity}`);
             safelyUpdateElementText('range', `${metrics.range}`);
             safelyUpdateElementText('payloadCapacity', `${metrics.payloadCapacity}`);
             safelyUpdateElementText('dischargeRate', `${metrics.dischargeRate}`);
@@ -718,14 +749,13 @@ document.addEventListener('DOMContentLoaded', function() {
             // Show APC propeller being used in status indicator
             if (rawMetrics.apcActive && rawMetrics.apcPropId) {
                 const statusText = document.querySelector('#apcStatus .status-text');
-                if (statusText) {
-                    statusText.textContent = `APC Active: ${rawMetrics.apcPropId}`;
-                }
+                if (statusText) statusText.textContent = `APC Active: ${rawMetrics.apcPropId}`;
+            } else if (rawMetrics.apcClamped && rawMetrics.apcPropId) {
+                const statusText = document.querySelector('#apcStatus .status-text');
+                if (statusText) statusText.textContent = `APC ${rawMetrics.apcPropId}: RPM outside data — using estimate`;
             } else if (calculator.apcEnabled) {
                 const statusText = document.querySelector('#apcStatus .status-text');
-                if (statusText) {
-                    statusText.textContent = 'APC Database Active';
-                }
+                if (statusText) statusText.textContent = 'APC Database Active';
             }
             
             // Update advanced metrics only if enabled in the UI
@@ -734,9 +764,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             updateBomAndCost(config, adjustedMetrics);
-            updateConfidenceBands(adjustedMetrics);
+            updateConfidenceBands(adjustedMetrics, config);
             updateSafetyChecks(config, adjustedMetrics);
             updateSensitivityChart(config, adjustedMetrics);
+            persistShareState();
             
             // Charts are updated separately by callers using the compareBy metric
             // to avoid redundant double-updates
@@ -781,11 +812,109 @@ document.addEventListener('DOMContentLoaded', function() {
         // Calculate recommended PID values
         const pids = calculator.calculateRecommendedPIDValues(config);
         safelyUpdateElementText('recommendedP', pids.P.toFixed(2));
-        safelyUpdateElementText('recommendedI', pids.I.toFixed(2));
-        safelyUpdateElementText('recommendedD', pids.D.toFixed(2));
+        safelyUpdateElementText('recommendedI', pids.I.toFixed(3));
+        safelyUpdateElementText('recommendedD', pids.D.toFixed(1));
+        safelyUpdateElementText('pidFirmware', pids.firmware || 'Betaflight 4.x');
     }
     
     // Function to toggle between drone types
+    function persistShareState() {
+        if (typeof ConfigStore === 'undefined') return;
+        const state = ConfigStore.snapshotState(calculator.droneType);
+        ConfigStore.saveLast(state);
+        ConfigStore.writeShareToLocation(state);
+    }
+
+    function populateMotorSelect() {
+        const select = document.getElementById('motorKv');
+        if (!select || typeof COMPONENT_DB === 'undefined') return;
+        const values = COMPONENT_DB.motorOptions(calculator.droneType);
+        ConfigStore.fillSelect(select, values.map((kv) => ({ value: kv, label: `${kv}KV` })));
+        sliderConfigMap.motorKv = values;
+        const slider = document.querySelector('.config-slider[data-config="motorKv"]');
+        if (slider) slider.max = String(Math.max(0, values.length - 1));
+        const labels = document.querySelector('.slider-container[data-target="motorKv"] .slider-labels');
+        if (labels) {
+            labels.textContent = '';
+            values.forEach((kv) => {
+                const span = document.createElement('span');
+                span.textContent = `${kv}KV`;
+                labels.appendChild(span);
+            });
+        }
+        syncSlidersToSelects();
+    }
+
+    function restoreSharedOrLastConfig() {
+        if (typeof ConfigStore === 'undefined') return;
+        const shared = ConfigStore.parseShare();
+        const last = ConfigStore.loadLast();
+        const state = shared || last;
+        if (!state) return;
+        if (state.droneType === 'fixedWing' && droneTypeToggle && !droneTypeToggle.checked) {
+            droneTypeToggle.checked = true;
+            toggleDroneType();
+        } else if (state.droneType === 'fpv' && droneTypeToggle && droneTypeToggle.checked) {
+            droneTypeToggle.checked = false;
+            toggleDroneType();
+        }
+        ConfigStore.applyConfig(state.config);
+        ConfigStore.applyEnvironment(state.environment);
+        populateMotorSelect();
+        ConfigStore.applyConfig(state.config);
+        syncSlidersToSelects();
+    }
+
+    function exportConfigJson() {
+        const state = ConfigStore.snapshotState(calculator.droneType);
+        const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `dronesetup-config-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    }
+
+    async function copyShareLink() {
+        persistShareState();
+        try {
+            await navigator.clipboard.writeText(location.href);
+            showUserInfo('Share link copied');
+        } catch (err) {
+            showUserInfo('Share URL updated in the address bar');
+        }
+    }
+
+    function importConfigJson(file) {
+        const reader = new FileReader();
+        reader.onload = function() {
+            try {
+                const state = JSON.parse(String(reader.result));
+                if (state.droneType === 'fixedWing' && !droneTypeToggle.checked) {
+                    droneTypeToggle.checked = true;
+                    toggleDroneType();
+                } else if (state.droneType === 'fpv' && droneTypeToggle.checked) {
+                    droneTypeToggle.checked = false;
+                    toggleDroneType();
+                }
+                ConfigStore.applyConfig(state.config);
+                ConfigStore.applyEnvironment(state.environment);
+                populateMotorSelect();
+                ConfigStore.applyConfig(state.config);
+                syncSlidersToSelects();
+                updateResults();
+                droneCharts.updateCharts(getCurrentConfig(), getCompareMetric());
+                showUserInfo('Configuration imported');
+            } catch (err) {
+                showUserError('Could not import that JSON file');
+            }
+        };
+        reader.readAsText(file);
+    }
+
     function toggleDroneType() {
         const isFPV = !droneTypeToggle.checked;
         const fpvOnlyElements = document.querySelectorAll('.fpv-only');
@@ -799,6 +928,7 @@ document.addEventListener('DOMContentLoaded', function() {
             fixedWingOnlyElements.forEach(el => el.classList.remove('hidden'));
             fpvOnlyElements.forEach(el => el.classList.add('hidden'));
         }
+        populateMotorSelect();
         
         // Also update the analyzer's drone type if needed
         componentAnalyzer.setDroneType && componentAnalyzer.setDroneType(calculator.droneType);
@@ -966,6 +1096,32 @@ document.addEventListener('DOMContentLoaded', function() {
             const adjusted = applyOperationalAdjustments(calculateDetailedMetrics(config));
             exportReport(config, adjusted);
             showUserInfo('JSON report exported');
+        });
+    }
+
+    const copyShareBtn = document.getElementById('copyShareBtn');
+    if (copyShareBtn) copyShareBtn.addEventListener('click', copyShareLink);
+    const exportConfigBtn = document.getElementById('exportConfigBtn');
+    if (exportConfigBtn) exportConfigBtn.addEventListener('click', exportConfigJson);
+    const importConfigInput = document.getElementById('importConfigInput');
+    if (importConfigInput) {
+        importConfigInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) importConfigJson(this.files[0]);
+            this.value = '';
+        });
+    }
+    const applyRecommendedPidBtn = document.getElementById('applyRecommendedPidBtn');
+    if (applyRecommendedPidBtn) {
+        applyRecommendedPidBtn.addEventListener('click', function() {
+            const pids = calculator.calculateRecommendedPIDValues(getCurrentConfig());
+            const pSlider = document.getElementById('pidPSlider');
+            const iSlider = document.getElementById('pidISlider');
+            const dSlider = document.getElementById('pidDSlider');
+            if (pSlider) pSlider.value = pids.P;
+            if (iSlider) iSlider.value = pids.I;
+            if (dSlider) dSlider.value = pids.D;
+            updatePIDSimulator();
+            showUserInfo(`Applied ${pids.firmware} recommendations`);
         });
     }
 
@@ -1381,6 +1537,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Enhanced initialization with better error handling
     try {
         // Initialize sliders
+        populateMotorSelect();
+        restoreSharedOrLastConfig();
         initSliders();
         
         // Update sliders for current drone type
@@ -1390,8 +1548,8 @@ document.addEventListener('DOMContentLoaded', function() {
         updateResults();
 
         // ─── Initialize new features ───
-        renderPrebuiltGrid();
-        updatePIDSimulator();
+        updateSnapshotsList();
+        refreshSnapshotSelectors();
 
         // Re-render pre-built grid when drone type changes
         droneTypeToggle.addEventListener('change', function() {

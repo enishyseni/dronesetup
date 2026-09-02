@@ -29,7 +29,9 @@ DroneSetup is a browser-based drone configuration and performance analysis tool.
 - Real-time performance calculations as you change any component
 - Physics-based analysis with four interactive chart tabs
 - Advanced Optimization Toolkit with mission profiles, constraint solver, cost/BOM, and comparison snapshots
-- APC propeller database integration for accurate thrust modeling
+- **APC propeller database** trimmed static-thrust pack (`data/apc-lite.json`, ~180 props) for hover estimates. RPM outside the published envelope falls back to the physics model with a visible warning.
+- Shareable build URL, JSON config import/export, and snapshots persisted in the browser
+- Payload mass, AUW override, optional ESC amps / battery C-rating, and mission load (hover / mixed / race / cruise)
 - Built-in Calculation Guide & Correlations reference
 
 ## Layout & Interface
@@ -57,7 +59,7 @@ The UI is organized into three main areas:
 
 ### Interactive Visualization Suite
 
-Four tabbed chart groups, each with 22 grid charts powered by Chart.js:
+Four tabbed chart groups, each with four charts powered by Chart.js (16 charts total):
 
 | Tab | Charts |
 | ------------------- | -------------------------------------------------------------------------- |
@@ -85,9 +87,11 @@ Real APC propeller database integrated directly into the configuration panel. Se
 
 - **Motor RPM**: `RPM = KV Voltage`
 - **Thrust**: `T = Ct n D`
-- **Current draw**: estimated from thrust demand and voltage, split into hover and burst profiles
-- **Flight time**: usable battery energy average current consumption
+- **Current draw**: hover/cruise from momentum or L/D, then scaled by **mission load**
+- **Flight time**: usable battery Ah (80%) ÷ average current. Li-Ion and LiPo differ by cell voltage and C-rate, not stacked bonus factors
+- **Thrust-to-weight**: total static thrust ÷ AUW (shown separately from W/kg)
 - **Range**: minimum of signal-limited (VTX) and endurance-limited range
+- Invalid configs fail visibly instead of inventing a 500 g airframe
 - **Wing loading and CG**: fixed-wing specific aerodynamic calculations
 
 ### Responsive Design
@@ -99,7 +103,7 @@ Real APC propeller database integrated directly into the configuration panel. Se
 ## Technology Stack
 
 - **HTML5 / CSS3** semantic markup, CSS Grid and Flexbox layout
-- **JavaScript (ES6+)** no framework, module-style organization across `calculations.js`, `charts.js`, `componentAnalysis.js`, `main.js`, `apcIntegration.js`, and `apcDemo.js`
+- **JavaScript (ES6+)** no framework; shared catalogs in `js/componentData.js`, config persistence in `js/configStore.js`, physics in `calculations.js`
 - **Chart.js** (CDN) all charts and the sensitivity view
 - **chartjs-plugin-datalabels** (CDN) data labels on charts
 - **Google Fonts** Roboto typeface
@@ -133,12 +137,19 @@ No build step required. The app runs entirely in the browser.
  php -S localhost:8000
  ```
 
-3. **Open** `http://localhost:8000` in your browser, or open `index.html` directly for basic use.
+3. **Open** `http://localhost:8000` in your browser.
+
+Run physics unit tests with:
+
+```bash
+node tests/calculations.test.js
+```
 
 ### Troubleshooting
 
 - **Charts not rendering** ensure JavaScript is enabled and the browser supports ES6
-- **APC propellers not loading** serve via a local server rather than opening the file directly
+- **APC propellers not loading** serve via a local server rather than opening the file directly (`data/apc-lite.json` is required)
+- Rebuild the lite pack after updating `APC-Prop-DB.csv`: `python3 scripts/build-apc-lite.py`
 - **Layout looks cramped** the UI is designed for 1400px+ wide viewports; zoom out if needed
 
 ## Usage
@@ -252,16 +263,18 @@ Open a GitHub Issue with: description, steps to reproduce, expected vs actual be
 
 ## Roadmap
 
-### Version 1.2 (Q2 2026)
+### Version 1.2 (shipped)
 
-- [ ] Configuration export and import (JSON)
-- [ ] Expanded motor and frame database
-- [ ] Multi-language support
+- [x] Configuration export / import (JSON) and shareable URL hash
+- [x] Payload mass, AUW override, ESC amps, battery C-rating
+- [x] Split FPV vs fixed-wing motor catalogs
+- [x] Trimmed APC pack with envelope warnings
+- [x] Physics unit tests (`node tests/calculations.test.js`)
 
-### Version 1.3 (Q3 2026)
+### Version 1.3 (next)
 
-- [ ] Environment-adjusted charts (altitude/wind affect chart data, not just estimates)
-- [ ] Printable/shareable build report
+- [ ] Printable/shareable PDF build report
+- [ ] Real vendor SKUs in the BOM
 - [ ] Improved mobile layout
 
 ### Version 2.0 (2027)
